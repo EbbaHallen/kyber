@@ -1,6 +1,6 @@
 CC ?= /usr/bin/cc
 CFLAGS += -Wall -Wextra -Wpedantic -Wmissing-prototypes -Wredundant-decls \
-  -Wshadow -Wpointer-arith -O3 -fomit-frame-pointer -z noexecstack
+  -Wshadow -Wpointer-arith -O3 -fomit-frame-pointer #-z noexecstack 
 NISTFLAGS += -Wno-unused-result -O3 -fomit-frame-pointer
 RM = /bin/rm
 
@@ -36,6 +36,7 @@ nistkat: \
 	nistkat/PQCgenKAT_kem512 \
 	nistkat/PQCgenKAT_kem768 \
 	nistkat/PQCgenKAT_kem1024 \
+
 
 
 lib/libpqcrystals_fips202_ref.so: fips202.c fips202.h
@@ -95,6 +96,9 @@ clean:
 	-$(RM) -f test/test_kyber512
 	-$(RM) -f test/test_kyber768
 	-$(RM) -f test/test_kyber1024
+	-$(RM) -f test/test_opencl512
+	-$(RM) -f test/test_opencl768
+	-$(RM) -f test/test_opencl1024
 	-$(RM) -f test/test_vectors512
 	-$(RM) -f test/test_vectors768
 	-$(RM) -f test/test_vectors1024

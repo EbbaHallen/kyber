@@ -6,6 +6,7 @@
 #include "cbd.h"
 #include "symmetric.h"
 #include "verify.h"
+#include <stdio.h>
 
 /*************************************************
 * Name:        poly_compress
