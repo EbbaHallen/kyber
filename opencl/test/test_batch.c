@@ -49,12 +49,23 @@ int main(void)
   }
   print_results("poly_getnoise_eta2: ", t, NTESTS);
 
+
+  // NTT GPU
+  for(i=0;i<NTESTS;i++) {
+    clock_t startTime = (double)clock()/CLOCKS_PER_SEC;
+    t[i] = cpucycles();
+    poly_ntt_GPU(&ap);
+    // batch_ntt(&aps);
+    double endTime = (double)clock()/CLOCKS_PER_SEC;
+    double timeElapsed = endTime - startTime;
+    printf("Time: %f \n", timeElapsed);
+  }
+  print_results("NTT GPU: ", t, NTESTS);
+
   for(i=0;i<NTESTS;i++) {
     t[i] = cpucycles();
-    // poly_ntt(&ap);
-    batch_ntt(&aps);
+    poly_ntt(&ap);
   }
-  print_results("NTT: ", t, NTESTS);
 
   for(i=0;i<NTESTS;i++) {
     t[i] = cpucycles();

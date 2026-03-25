@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 #include "../kem.h"
 #include "../params.h"
 #include "../indcpa.h"
@@ -11,9 +12,10 @@
 #include "cpucycles.h"
 #include "speed_print.h"
 
-#define NTESTS 1000
+#define NTESTS 100
 
 uint64_t t[NTESTS];
+double t_time[NTESTS];
 uint8_t seed[KYBER_SYMBYTES] = {0};
 
 int main(void)
@@ -49,11 +51,27 @@ int main(void)
   }
   print_results("poly_getnoise_eta2: ", t, NTESTS);
 
+   // NTT GPU
   for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    poly_ntt(&ap);
+    clock_t startTime = (double)clock()/CLOCKS_PER_SEC;
+    poly_ntt_GPU(&ap);
+    // batch_ntt(&aps);
+    double endTime = (double)clock()/CLOCKS_PER_SEC;
+    double timeElapsed = endTime - startTime;
+    t_time[i] = timeElapsed;
+    //printf("Time: %f \n", timeElapsed);
   }
-  print_results("NTT: ", t, NTESTS);
+  print_result_time("NTT GPU: ", t_time, NTESTS);
+
+  for(i=0;i<NTESTS;i++) {
+    // t[i] = cpucycles();
+    clock_t startTime = (double)clock()/CLOCKS_PER_SEC;
+    poly_ntt(&ap);
+    double endTime = (double)clock()/CLOCKS_PER_SEC;
+    double timeElapsed = endTime - startTime;
+    t_time[i] = timeElapsed;
+  }
+  print_result_time("NTT: ", t_time, NTESTS);
 
   for(i=0;i<NTESTS;i++) {
     t[i] = cpucycles();

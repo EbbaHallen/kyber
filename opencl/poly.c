@@ -284,9 +284,12 @@ void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t non
 //     exit(1);
 // }
 
-
-
 void poly_ntt(poly *r)
+{
+  ntt(r->coeffs);
+}
+
+void poly_ntt_GPU(poly *r)
 {
   // Setup PpenCL
   cl_uint num_platforms;
@@ -303,7 +306,7 @@ void poly_ntt(poly *r)
 
   err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
   CHECK(err);
-  char * name;
+  // char * name;
   // size_t size;
   // clGetDeviceInfo(device, CL_DEVICE_NAME, 0, NULL, &size);
   // name = (char*) malloc(size);
