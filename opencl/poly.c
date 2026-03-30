@@ -287,6 +287,7 @@ void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t non
 void poly_ntt(poly *r)
 {
   ntt(r->coeffs);
+  poly_reduce(r);
 }
 
 void poly_ntt_GPU(poly *r)

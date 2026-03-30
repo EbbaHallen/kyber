@@ -11,6 +11,16 @@ short montgomery_reduce(int a)
   return t;
 }
 
+short barrett_reduce(short a) {
+  short t;
+  short v = ((1<<26) + KYBER_Q/2)/KYBER_Q;
+
+  t  = ((int)v*a + (1<<25)) >> 26;
+  t *= KYBER_Q;
+  return a - t;
+}
+
+
 __constant short zetas[128] = {
   -1044,  -758,  -359, -1517,  1493,  1422,   287,   202,
    -171,   622,  1577,   182,   962, -1202, -1474,  1468,
@@ -34,34 +44,55 @@ static short fqmul(short a, short b) {
   return montgomery_reduce((short)a*b);
 }
 
-// Pseudocode for kernel
-// 128 threads -> I only have 4 cores on maliGPU
-kernel void ntt(__global short r[256]){
+// Shared memory
+// kernel void ntt_shared(__global short **r){
+//   __private unsigned int len, start, j, k, group;
+//   __private int t, zeta;
+//   const int local_tid = get_global_id(0);
+//   const int block = get_global_id(1);
+//   // TODO Fix indexing and so that each kernel accesses correct poly
+//   k = 1;
+  
+
+//   __local short local_r[256];
+//   local_r[tid] = r[tid][block];
+//   local_r[tid + 128] = r[tid + 128][block];
+  
+//   barrier(CLK_LOCAL_MEM_FENCE);
+
+//   for(int shift = 7; shift >=1; shift--) {
+//     len = 1 << shift;
+//     group = tid >> shift;
+//     zeta = zetas[k + group];
+//     j = group * len + tid;
+//     t = fqmul(zeta, local_r[j + len]);
+//     local_r[j + len] = local_r[j] - t;
+//     local_r[j] = local_r[j] + t;
+//     k = k * 2;
+
+//   }
+//   r[tid] = barrett_reduce(local_r[tid]);
+//   r[tid +128] = barrett_reduce(local_r[tid +128]);
+// }
+
+
+// Original NTT kernel
+kernel void ntt(__global short *r){
   __private unsigned int len, start, j, k, group;
   __private short t, zeta;
   const int tid = get_global_id(0);
+  const int block = get_global_id(1);
+  // TODO Fix indexing and so that each kernel accesses correct poly
   k = 1;
-  
+    
 
-  __local short local_r[256];
-  local_r[tid] = r[tid];
-  local_r[tid + 128] = r[tid + 128];
-  // barrier(CLK_GLOBAL_MEM_FENCE);
-
-  for(int shift = 7; shift >=1; shift--) {
-    len = 1 << shift;
-    group = tid >> shift;
-    // if(tid == 127) printf("%u\n", group);
-    zeta = zetas[k + group];
-    j = group * len + tid;
-    t = fqmul(zeta, local_r[j + len]);
-    local_r[j + len] = local_r[j] - t;
-    local_r[j] = local_r[j] + t;
-    k = k * 2;
-    barrier(CLK_LOCAL_MEM_FENCE);
+  for(int len = 128; len >=2; len >>=1) {
+    zeta = zetas[k + (tid/len)];
+    j = (tid/len) * len + tid;
+    t = fqmul(zeta, r[j + len]);
+    r[j + len] = r[j] - t;
+    r[j] = r[j] + t;
+    k = k << 1;
+    barrier(CLK_GLOBAL_MEM_FENCE);
   }
-
-
-  r[tid] = local_r[tid];
-  r[tid +128] = local_r[tid +128];
 }
