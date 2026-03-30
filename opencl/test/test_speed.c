@@ -12,11 +12,21 @@
 #include "cpucycles.h"
 #include "speed_print.h"
 
-#define NTESTS 100
+#define NTESTS 1000
 
 uint64_t t[NTESTS];
 double t_time[NTESTS];
 uint8_t seed[KYBER_SYMBYTES] = {0};
+
+double now() {
+    struct timespec time;
+    clock_gettime(CLOCK_MONOTONIC, &time);
+    return time.tv_sec + time.tv_nsec * 1e-9;
+}
+
+
+
+
 
 int main(void)
 {
@@ -52,9 +62,12 @@ int main(void)
   print_results("poly_getnoise_eta2: ", t, NTESTS);
 
    // NTT GPU
+  gpu_ctx ctx;
+  gpu_init(&ctx);
+  double start = now();
   for(i=0;i<NTESTS;i++) {
     clock_t startTime = (double)clock()/CLOCKS_PER_SEC;
-    poly_ntt_GPU(&ap);
+    poly_ntt_GPU_speed(&ctx, &ap);
     // batch_ntt(&aps);
     double endTime = (double)clock()/CLOCKS_PER_SEC;
     double timeElapsed = endTime - startTime;
@@ -62,6 +75,8 @@ int main(void)
     //printf("Time: %f \n", timeElapsed);
   }
   print_result_time("NTT GPU: ", t_time, NTESTS);
+  double end = now();
+  printf("Avg time: %f ms\n", (end - start)*1000/NTESTS);
 
   for(i=0;i<NTESTS;i++) {
     // t[i] = cpucycles();

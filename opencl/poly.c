@@ -346,6 +346,22 @@ void poly_ntt_GPU(poly *r)
   poly_reduce(r);
 
 }
+
+void poly_ntt_GPU_speed(gpu_ctx *ctx, poly *r)
+{
+    clEnqueueWriteBuffer(ctx->queue, ctx->buffer, CL_FALSE, 0,
+                         sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
+
+    clSetKernelArg(ctx->kernel, 0, sizeof(ctx->buffer), &ctx->buffer);
+
+    size_t global = 128;
+    clEnqueueNDRangeKernel(ctx->queue, ctx->kernel, 1, NULL, &global, NULL, 0, NULL, NULL);
+
+    clEnqueueReadBuffer(ctx->queue, ctx->buffer, CL_FALSE, 0,
+                        sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
+
+    clFinish(ctx->queue);
+}
 /*************************************************
 * Name:        poly_invntt_tomont
 *
@@ -439,4 +455,27 @@ void poly_sub(poly *r, const poly *a, const poly *b)
   unsigned int i;
   for(i=0;i<KYBER_N;i++)
     r->coeffs[i] = a->coeffs[i] - b->coeffs[i];
+}
+
+
+
+// TODO move from here to a separate file??
+void gpu_init(gpu_ctx *ctx) {
+    cl_platform_id platform;
+    cl_device_id device;
+    cl_int err;
+
+    clGetPlatformIDs(1, &platform, NULL);
+    clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
+
+    ctx->context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
+    ctx->queue = clCreateCommandQueue(ctx->context, device, 0, &err);
+
+    cl_program program = clCreateProgramWithSource(ctx->context, 1, &source, NULL, &err);
+    clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+
+    ctx->kernel = clCreateKernel(program, "ntt", &err);
+
+    ctx->buffer = clCreateBuffer(ctx->context, CL_MEM_READ_WRITE,
+                                 sizeof(int16_t) * 256, NULL, &err);
 }
