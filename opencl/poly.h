@@ -1,6 +1,7 @@
 #ifndef POLY_H
 #define POLY_H
 
+#define CL_TARGET_OPENCL_VERSION 200
 #include <stdint.h>
 #include <CL/cl.h>
 

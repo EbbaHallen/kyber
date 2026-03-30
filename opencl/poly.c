@@ -284,13 +284,13 @@ void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t non
 //     exit(1);
 // }
 
-void poly_ntt(poly *r)
+void poly_ntt_cpu(poly *r)
 {
   ntt(r->coeffs);
   poly_reduce(r);
 }
 
-void poly_ntt_GPU(poly *r)
+void poly_ntt(poly *r)
 {
   // Setup PpenCL
   cl_uint num_platforms;
@@ -301,23 +301,23 @@ void poly_ntt_GPU(poly *r)
     return ;
   }
 
-
   cl_device_id device;
   cl_int err;
 
   err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
   CHECK(err);
-  // char * name;
-  // size_t size;
-  // clGetDeviceInfo(device, CL_DEVICE_NAME, 0, NULL, &size);
-  // name = (char*) malloc(size);
-  // clGetDeviceInfo(device, CL_DEVICE_NAME, size, name, NULL);
-  // printf("%s", name);
-  // free(name);
 
   cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
   CHECK(err);
-  cl_command_queue queue = clCreateCommandQueue(context, device, (cl_command_queue_properties)0, &err);
+  
+  cl_command_queue_properties props[] = {0};
+
+  cl_command_queue queue = clCreateCommandQueueWithProperties(
+      context,
+      device,
+      props,
+      &err
+  );
   CHECK(err);
   
   cl_program program = clCreateProgramWithSource(context, 1, &source, NULL, &err);
