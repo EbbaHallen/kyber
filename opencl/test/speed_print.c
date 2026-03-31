@@ -76,7 +76,7 @@ static double average_time(double *t, size_t tlen) {
 void print_result_time(const char *s, double *t, size_t tlen) {
   // size_t i;
   printf("%s\n", s);
-  printf("median: %f seconds\n", median_time(t, tlen));
-  printf("average: %f seconds\n", average_time(t, tlen));
+  printf("median: %f ms\n", median_time(t, tlen));
+  printf("average: %f ms\n", average_time(t, tlen));
   printf("\n");
 }

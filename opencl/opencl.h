@@ -10,6 +10,7 @@ typedef struct {
   cl_kernel kernel;
   cl_mem buffer;
   cl_event event;
+  double time;
 } gpu_ctx;
 
 extern gpu_ctx g_ctx;

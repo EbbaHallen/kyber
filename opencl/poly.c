@@ -365,10 +365,10 @@ void poly_ntt_GPU_speed(poly *r)
     
     // Time kernel execution
     cl_ulong time_start, time_end;
-    clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
-    clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
-    double nanoseconds = time_end - time_start;
-    g_ctx.time = nanoseconds;
+    clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &time_start, NULL);
+    clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &time_end, NULL);
+    double nanoseconds = (double)(time_end - time_start);
+    g_ctx.time = nanoseconds * 1e-06; // convert to milliseconds
     poly_reduce(r);
 }
 /*************************************************

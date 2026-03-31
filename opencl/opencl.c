@@ -16,7 +16,10 @@ void opencl_init() {
     clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
 
     g_ctx.context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
-    cl_command_queue_properties props[] = {0};
+    cl_command_queue_properties props[] = {
+        CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE,
+        0
+    };
 
     g_ctx.queue = clCreateCommandQueueWithProperties(
         g_ctx.context,
@@ -43,3 +46,4 @@ void opencl_cleanup() {
     clReleaseCommandQueue(g_ctx.queue);
     clReleaseContext(g_ctx.context);
 }
+
