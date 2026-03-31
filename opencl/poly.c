@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <CL/cl.h>
+#include "opencl.h"
 #include "params.h"
 #include "poly.h"
 #include "ntt.h"
@@ -9,7 +10,7 @@
 #include "cbd.h"
 #include "symmetric.h"
 #include "verify.h"
-#include "ntt_kernels.h"
+// #include "ntt_kernels.h"
 #include <stdio.h>
 
 
@@ -265,8 +266,7 @@ void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t non
 *
 * Arguments:   - uint16_t *r: pointer to in/output polynomial
 **************************************************/
-#define CHECK(err) if (err != CL_SUCCESS) { \
-    printf("Error %d at line %d\n", err, __LINE__); exit(1); }
+
 
 // void handle_error(cl_program program, cl_device_id device){
 //   size_t log_size;
@@ -284,84 +284,92 @@ void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t non
 //     exit(1);
 // }
 
-void poly_ntt_cpu(poly *r)
+void poly_ntt(poly *r)
 {
   ntt(r->coeffs);
   poly_reduce(r);
 }
 
-void poly_ntt(poly *r)
-{
-  // Setup PpenCL
-  cl_uint num_platforms;
-  cl_platform_id platform;
-  clGetPlatformIDs(1,&platform,&num_platforms);
-  if(num_platforms == 0 ){
-    printf("No opencl platforms found\n");
-    return ;
-  }
+// void poly_ntt_GPU(poly *r)
+// {
+//   // Setup PpenCL
+//   cl_uint num_platforms;
+//   cl_platform_id platform;
+//   clGetPlatformIDs(1,&platform,&num_platforms);
+//   if(num_platforms == 0 ){
+//     printf("No opencl platforms found\n");
+//     return ;
+//   }
 
-  cl_device_id device;
-  cl_int err;
+//   cl_device_id device;
+//   cl_int err;
 
-  err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
-  CHECK(err);
+//   err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
+//   CHECK(err);
 
-  cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
-  CHECK(err);
+//   cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
+//   CHECK(err);
   
-  cl_command_queue_properties props[] = {0};
+//   cl_command_queue_properties props[] = {0};
 
-  cl_command_queue queue = clCreateCommandQueueWithProperties(
-      context,
-      device,
-      props,
-      &err
-  );
-  CHECK(err);
+//   cl_command_queue queue = clCreateCommandQueueWithProperties(
+//       context,
+//       device,
+//       props,
+//       &err
+//   );
+//   CHECK(err);
   
-  cl_program program = clCreateProgramWithSource(context, 1, &source, NULL, &err);
-  CHECK(err);
+//   cl_program program = clCreateProgramWithSource(context, 1, &source, NULL, &err);
+//   CHECK(err);
 
-  err = clBuildProgram(program, 0, NULL ,NULL, NULL, NULL);
-  CHECK(err);
+//   err = clBuildProgram(program, 0, NULL ,NULL, NULL, NULL);
+//   CHECK(err);
 
-  cl_kernel kernel = clCreateKernel(program, "ntt", &err);
-  CHECK(err);
+//   cl_kernel kernel = clCreateKernel(program, "ntt", &err);
+//   CHECK(err);
 
-  // Create buffer
-  cl_mem buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int16_t) * 256, NULL, &err);
-  CHECK(err);
+//   // Create buffer
+//   cl_mem buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int16_t) * 256, NULL, &err);
+//   CHECK(err);
 
-  clEnqueueWriteBuffer(queue, buffer, CL_FALSE, 0, sizeof(int16_t) * 256, r->coeffs, 0, NULL, NULL);
+//   clEnqueueWriteBuffer(queue, buffer, CL_FALSE, 0, sizeof(int16_t) * 256, r->coeffs, 0, NULL, NULL);
 
 
-  //excecute Kernel
-  clSetKernelArg(kernel, 0, sizeof(buffer), &buffer);
-  size_t global_dimensions[] = {128,0,0};
-  clEnqueueNDRangeKernel(queue, kernel, 1, NULL, global_dimensions, NULL, 0, NULL, NULL);
+//   //excecute Kernel
+//   clSetKernelArg(kernel, 0, sizeof(buffer), &buffer);
+//   size_t global_dimensions[] = {128,0,0};
+//   clEnqueueNDRangeKernel(queue, kernel, 1, NULL, global_dimensions, NULL, 0, NULL, NULL);
 
-  // read baack result
-  clEnqueueReadBuffer(queue, buffer, CL_FALSE, 0, sizeof(int16_t) * 256, r->coeffs, 0, NULL, NULL);
-  clFinish(queue);
-  poly_reduce(r);
+//   // read baack result
+//   clEnqueueReadBuffer(queue, buffer, CL_FALSE, 0, sizeof(int16_t) * 256, r->coeffs, 0, NULL, NULL);
+//   clFinish(queue);
+//   poly_reduce(r);
 
-}
+// }
 
-void poly_ntt_GPU_speed(gpu_ctx *ctx, poly *r)
+void poly_ntt_GPU_speed(poly *r)
 {
-    clEnqueueWriteBuffer(ctx->queue, ctx->buffer, CL_FALSE, 0,
+    clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
                          sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
 
-    clSetKernelArg(ctx->kernel, 0, sizeof(ctx->buffer), &ctx->buffer);
+    clSetKernelArg(g_ctx.kernel, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
     size_t global = 128;
-    clEnqueueNDRangeKernel(ctx->queue, ctx->kernel, 1, NULL, &global, NULL, 0, NULL, NULL);
+    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 1, NULL, &global, NULL, 0, NULL, &g_ctx.event);
 
-    clEnqueueReadBuffer(ctx->queue, ctx->buffer, CL_FALSE, 0,
+    clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
                         sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
 
-    clFinish(ctx->queue);
+    clFinish(g_ctx.queue);
+    
+    // Time kernel execution
+    cl_ulong time_start, time_end;
+    clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_START, sizeof(time_start), &time_start, NULL);
+    clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_END, sizeof(time_end), &time_end, NULL);
+    double nanoseconds = time_end - time_start;
+    g_ctx.time = nanoseconds;
+    poly_reduce(r);
 }
 /*************************************************
 * Name:        poly_invntt_tomont
@@ -460,23 +468,3 @@ void poly_sub(poly *r, const poly *a, const poly *b)
 
 
 
-// TODO move from here to a separate file??
-void gpu_init(gpu_ctx *ctx) {
-    cl_platform_id platform;
-    cl_device_id device;
-    cl_int err;
-
-    clGetPlatformIDs(1, &platform, NULL);
-    clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
-
-    ctx->context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
-    ctx->queue = clCreateCommandQueue(ctx->context, device, 0, &err);
-
-    cl_program program = clCreateProgramWithSource(ctx->context, 1, &source, NULL, &err);
-    clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
-
-    ctx->kernel = clCreateKernel(program, "ntt", &err);
-
-    ctx->buffer = clCreateBuffer(ctx->context, CL_MEM_READ_WRITE,
-                                 sizeof(int16_t) * 256, NULL, &err);
-}

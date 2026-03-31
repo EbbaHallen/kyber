@@ -15,12 +15,6 @@ typedef struct{
   int16_t coeffs[KYBER_N];
 } poly;
 
-typedef struct {
-  cl_context context;
-  cl_command_queue queue;
-  cl_kernel kernel;
-  cl_mem buffer;
-} gpu_ctx;
 
 #define poly_compress KYBER_NAMESPACE(poly_compress)
 void poly_compress(uint8_t r[KYBER_POLYCOMPRESSEDBYTES], const poly *a);
@@ -48,7 +42,7 @@ void poly_ntt(poly *r);
 #define poly_ntt_GPU KYBER_NAMESPACE(poly_ntt_GPU)
 void poly_ntt_GPU(poly *r);
 #define poly_ntt_GPU_speed KYBER_NAMESPACE(poly_ntt_GPU_speed)
-void poly_ntt_GPU_speed(gpu_ctx *ctx, poly *r);
+void poly_ntt_GPU_speed(poly *r);
 #define poly_invntt_tomont KYBER_NAMESPACE(poly_invntt_tomont)
 void poly_invntt_tomont(poly *r);
 #define poly_basemul_montgomery KYBER_NAMESPACE(poly_basemul_montgomery)
@@ -64,7 +58,5 @@ void poly_add(poly *r, const poly *a, const poly *b);
 #define poly_sub KYBER_NAMESPACE(poly_sub)
 void poly_sub(poly *r, const poly *a, const poly *b);
 
-#define gpu_init KYBER_NAMESPACE(gpu_init)
-void gpu_init(gpu_ctx *ctx);
 
 #endif

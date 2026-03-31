@@ -11,6 +11,7 @@
 #include "../randombytes.h"
 #include "cpucycles.h"
 #include "speed_print.h"
+#include "../opencl.h"
 
 #define NTESTS 1000
 
@@ -26,8 +27,6 @@ double now() {
 
 
 
-
-
 int main(void)
 {
   unsigned int i;
@@ -39,6 +38,8 @@ int main(void)
   uint8_t coins64[2*KYBER_SYMBYTES];
   polyvec matrix[KYBER_K];
   poly ap;
+
+  opencl_init();
 
   randombytes(coins32, KYBER_SYMBYTES);
   randombytes(coins64, 2*KYBER_SYMBYTES);
@@ -62,12 +63,11 @@ int main(void)
   print_results("poly_getnoise_eta2: ", t, NTESTS);
 
    // NTT GPU
-  gpu_ctx ctx;
-  gpu_init(&ctx);
+ 
   double start = now();
   for(i=0;i<NTESTS;i++) {
     clock_t startTime = (double)clock()/CLOCKS_PER_SEC;
-    poly_ntt_GPU_speed(&ctx, &ap);
+    poly_ntt_GPU_speed(&ap);
     // batch_ntt(&aps);
     double endTime = (double)clock()/CLOCKS_PER_SEC;
     double timeElapsed = endTime - startTime;
@@ -184,5 +184,6 @@ int main(void)
   }
   print_results("kyber_decaps: ", t, NTESTS);
 
+  opencl_cleanup();
   return 0;
 }

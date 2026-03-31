@@ -3,6 +3,7 @@
 #include <string.h>
 #include "../kem.h"
 #include "../randombytes.h"
+#include "../opencl.h"
 
 #define NTESTS 10
 
@@ -13,6 +14,8 @@ static int test_keys(void)
   uint8_t ct[CRYPTO_CIPHERTEXTBYTES];
   uint8_t key_a[CRYPTO_BYTES];
   uint8_t key_b[CRYPTO_BYTES];
+
+
 
   //Alice generates a public key
   crypto_kem_keypair(pk, sk);
@@ -38,6 +41,8 @@ static int test_invalid_sk_a(void)
   uint8_t ct[CRYPTO_CIPHERTEXTBYTES];
   uint8_t key_a[CRYPTO_BYTES];
   uint8_t key_b[CRYPTO_BYTES];
+
+  
 
   //Alice generates a public key
   crypto_kem_keypair(pk, sk);
@@ -74,6 +79,8 @@ static int test_invalid_ciphertext(void)
   } while(!b);
   randombytes((uint8_t *)&pos, sizeof(size_t));
 
+
+
   //Alice generates a public key
   crypto_kem_keypair(pk, sk);
 
@@ -99,6 +106,8 @@ int main(void)
   unsigned int i;
   int r;
 
+  opencl_init();
+
   for(i=0;i<NTESTS;i++) {
     r  = test_keys();
     r |= test_invalid_sk_a();
@@ -111,5 +120,6 @@ int main(void)
   printf("CRYPTO_PUBLICKEYBYTES:  %d\n",CRYPTO_PUBLICKEYBYTES);
   printf("CRYPTO_CIPHERTEXTBYTES: %d\n",CRYPTO_CIPHERTEXTBYTES);
 
+  opencl_cleanup();
   return 0;
 }

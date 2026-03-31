@@ -171,7 +171,7 @@ void polyvec_ntt(polyvec *r)
 {
   unsigned int i;
   for(i=0;i<KYBER_K;i++)
-    poly_ntt(&r->vec[i]);
+    poly_ntt_GPU_speed(&r->vec[i]);
 }
 
 /*************************************************
@@ -184,6 +184,7 @@ void polyvec_ntt(polyvec *r)
 **************************************************/
 void polyvec_invntt_tomont(polyvec *r)
 {
+  
   unsigned int i;
   for(i=0;i<KYBER_K;i++)
     poly_invntt_tomont(&r->vec[i]);

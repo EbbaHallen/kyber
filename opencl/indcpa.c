@@ -321,7 +321,7 @@ void indcpa_dec(uint8_t m[KYBER_INDCPA_MSGBYTES],
   unpack_ciphertext(&b, &v, c);
   unpack_sk(&skpv, sk);
 
-  polyvec_ntt(&b);
+  polyvec_ntt( &b);
   polyvec_basemul_acc_montgomery(&mp, &skpv, &b);
   poly_invntt_tomont(&mp);
 

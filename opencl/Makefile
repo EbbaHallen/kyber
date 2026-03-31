@@ -6,9 +6,9 @@ LDLIBS += -lOpenCL
 RM = /bin/rm
 #note: removed -z noexecstack from CFLAGS
 
-SOURCES = kem.c indcpa.c polyvec.c poly.c ntt.c cbd.c reduce.c verify.c
+SOURCES = opencl.c kem.c indcpa.c polyvec.c poly.c ntt.c cbd.c reduce.c verify.c 
 SOURCESKECCAK = $(SOURCES) fips202.c symmetric-shake.c
-HEADERS = params.h kem.h indcpa.h polyvec.h poly.h ntt.h cbd.h reduce.c verify.h symmetric.h
+HEADERS =  params.h opencl.h kem.h indcpa.h polyvec.h poly.h ntt.h cbd.h reduce.c verify.h symmetric.h 
 HEADERSKECCAK = $(HEADERS) fips202.h
 
 .PHONY: all speed shared clean
@@ -39,8 +39,10 @@ nistkat: \
 	nistkat/PQCgenKAT_kem768 \
 	nistkat/PQCgenKAT_kem1024 \
 
-opencl: \
-	test/test_kyber512
+kyber: \
+	test/test_kyber512 \
+	test/test_kyber768 \
+	test/test_kyber1024 \
 
 
 lib/libpqcrystals_fips202_ref.so: fips202.c fips202.h
