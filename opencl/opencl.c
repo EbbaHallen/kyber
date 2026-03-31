@@ -36,7 +36,7 @@ void opencl_init() {
     g_ctx.kernel = clCreateKernel(program, "ntt", &err);
 
     g_ctx.buffer = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
-                                 sizeof(int16_t) * 256, NULL, &err);
+                                 sizeof(int16_t) * 256 * BATCH_SIZE, NULL, &err);
 }
 
 

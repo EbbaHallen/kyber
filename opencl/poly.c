@@ -351,15 +351,15 @@ void poly_ntt(poly *r)
 void poly_ntt_GPU_speed(poly *r)
 {
     clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
-                         sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
+                         sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
 
     clSetKernelArg(g_ctx.kernel, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
-    size_t global = 128;
-    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 1, NULL, &global, NULL, 0, NULL, &g_ctx.event);
+    size_t global[] = {128, BATCH_SIZE};
+    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 2, NULL, global, NULL, 0, NULL, &g_ctx.event);
 
     clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
-                        sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
+                        sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
 
     clFinish(g_ctx.queue);
     

@@ -5,6 +5,7 @@
 #define KYBER_K 3	/* Change this for different security strengths */
 #endif
 
+#define BATCH_SIZE 64
 
 /* Don't change parameters below this line */
 #if   (KYBER_K == 2)
