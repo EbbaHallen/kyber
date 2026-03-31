@@ -77,6 +77,27 @@ static short fqmul(short a, short b) {
 
 
 // Original NTT kernel
+// kernel void ntt(__global short *r){
+//   __private unsigned int len, start, j, k, group;
+//   __private short t, zeta;
+//   const int tid = get_global_id(0);
+//   const int block = get_global_id(1);
+//   // TODO Fix indexing and so that each kernel accesses correct poly
+//   k = 1;
+    
+
+//   for(int len = 128; len >=2; len >>=1) {
+//     zeta = zetas[k + (tid/len)];
+//     j = (tid/len) * len + tid;
+//     t = fqmul(zeta, r[j + len]);
+//     r[j + len] = r[j] - t;
+//     r[j] = r[j] + t;
+//     k = k << 1;
+//     barrier(CLK_GLOBAL_MEM_FENCE);
+//   }
+// }
+
+ // Batched + shared memory NTT kernel
 kernel void ntt(__global short *r){
   __private unsigned int len, start, j, k, group;
   __private short t, zeta;
@@ -84,7 +105,10 @@ kernel void ntt(__global short *r){
   const int block = get_global_id(1);
   // TODO Fix indexing and so that each kernel accesses correct poly
   k = 1;
-    
+
+  __local short local_r[256];
+  local_r[tid] = r[tid + block*256];
+  local_r[tid + 128] = r[tid + 128 + block*256];
 
   for(int len = 128; len >=2; len >>=1) {
     zeta = zetas[k + (tid/len)];
@@ -93,6 +117,9 @@ kernel void ntt(__global short *r){
     r[j + len] = r[j] - t;
     r[j] = r[j] + t;
     k = k << 1;
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE);
   }
+
+  r[tid + block*256] = barrett_reduce(local_r[tid]);
+  r[tid + 128 + block*256] = barrett_reduce(local_r[tid +128]);
 }
