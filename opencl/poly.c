@@ -290,6 +290,14 @@ void poly_ntt(poly *r)
   poly_reduce(r);
 }
 
+void poly_ntt_batch(poly_batch *r)
+{
+  for(int i = 0; i < BATCH_SIZE; i++) {
+    ntt(r->coeffs + i * KYBER_N);
+    poly_reduce(r->coeffs + i * KYBER_N);
+  }
+}
+
 // void poly_ntt_GPU(poly *r)
 // {
 //   // Setup PpenCL
@@ -351,12 +359,36 @@ void poly_ntt(poly *r)
 void poly_ntt_GPU_speed(poly *r)
 {
     clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
+                         sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
+
+    clSetKernelArg(g_ctx.kernel, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
+
+    size_t global[] = {128};
+    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 1, NULL, global, NULL, 0, NULL, &g_ctx.event);
+
+    clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
+                        sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
+
+    clFinish(g_ctx.queue);
+    
+    // Time kernel execution
+    cl_ulong time_start, time_end;
+    clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &time_start, NULL);
+    clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &time_end, NULL);
+    double nanoseconds = (double)(time_end - time_start);
+    g_ctx.time = nanoseconds * 1e-06; // convert to milliseconds
+    // poly_reduce(r);
+}
+void poly_ntt_GPU_speed_batch(poly_batch *r)
+{
+    clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
                          sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
 
     clSetKernelArg(g_ctx.kernel, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
     size_t global[] = {128, BATCH_SIZE};
-    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 2, NULL, global, NULL, 0, NULL, &g_ctx.event);
+    size_t local[] = {128, 1};
+    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 2, NULL, global, local, 0, NULL, &g_ctx.event);
 
     clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
                         sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
@@ -369,7 +401,7 @@ void poly_ntt_GPU_speed(poly *r)
     clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &time_end, NULL);
     double nanoseconds = (double)(time_end - time_start);
     g_ctx.time = nanoseconds * 1e-06; // convert to milliseconds
-    poly_reduce(r);
+    // poly_reduce(r);
 }
 /*************************************************
 * Name:        poly_invntt_tomont

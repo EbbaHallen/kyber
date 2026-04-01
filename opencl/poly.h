@@ -1,9 +1,9 @@
 #ifndef POLY_H
 #define POLY_H
 
-#define CL_TARGET_OPENCL_VERSION 200
+
 #include <stdint.h>
-#include <CL/cl.h>
+
 
 #include "params.h"
 
@@ -14,6 +14,11 @@
 typedef struct{
   int16_t coeffs[KYBER_N];
 } poly;
+
+typedef struct{
+  int16_t coeffs[KYBER_N * BATCH_SIZE];
+} poly_batch;
+
 
 
 #define poly_compress KYBER_NAMESPACE(poly_compress)
@@ -39,10 +44,14 @@ void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t non
 
 #define poly_ntt KYBER_NAMESPACE(poly_ntt)
 void poly_ntt(poly *r);
+#define poly_ntt_batch KYBER_NAMESPACE(poly_ntt_batch)
+void poly_ntt_batch(poly_batch *r);
 #define poly_ntt_GPU KYBER_NAMESPACE(poly_ntt_GPU)
 void poly_ntt_GPU(poly *r);
 #define poly_ntt_GPU_speed KYBER_NAMESPACE(poly_ntt_GPU_speed)
 void poly_ntt_GPU_speed(poly *r);
+#define poly_ntt_GPU_speed_batch KYBER_NAMESPACE(poly_ntt_GPU_speed_batch)
+void poly_ntt_GPU_speed_batch(poly_batch *r);
 #define poly_invntt_tomont KYBER_NAMESPACE(poly_invntt_tomont)
 void poly_invntt_tomont(poly *r);
 #define poly_basemul_montgomery KYBER_NAMESPACE(poly_basemul_montgomery)

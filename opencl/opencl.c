@@ -1,5 +1,6 @@
 #include "opencl.h"
 #include "ntt_kernels.h"
+#include "params.h"
 #include <stdio.h>
 
 gpu_ctx g_ctx;

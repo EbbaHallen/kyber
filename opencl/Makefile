@@ -125,6 +125,9 @@ clean:
 	-$(RM) -f test/test_speed512
 	-$(RM) -f test/test_speed768
 	-$(RM) -f test/test_speed1024
+	-$(RM) -f test/test_ntt512
+	-$(RM) -f test/test_ntt768
+	-$(RM) -f test/test_ntt1024
 	-$(RM) -f nistkat/PQCgenKAT_kem512
 	-$(RM) -f nistkat/PQCgenKAT_kem768
 	-$(RM) -f nistkat/PQCgenKAT_kem1024
