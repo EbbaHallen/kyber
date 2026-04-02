@@ -287,74 +287,17 @@ void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t non
 void poly_ntt(poly *r)
 {
   ntt(r->coeffs);
-  poly_reduce(r);
+  // poly_reduce(r);
 }
 
 void poly_ntt_batch(poly_batch *r)
 {
   for(int i = 0; i < BATCH_SIZE; i++) {
     ntt(r->coeffs + i * KYBER_N);
-    poly_reduce(r->coeffs + i * KYBER_N);
+    // poly_reduce_batch(r->coeffs + i * KYBER_N);
   }
 }
 
-// void poly_ntt_GPU(poly *r)
-// {
-//   // Setup PpenCL
-//   cl_uint num_platforms;
-//   cl_platform_id platform;
-//   clGetPlatformIDs(1,&platform,&num_platforms);
-//   if(num_platforms == 0 ){
-//     printf("No opencl platforms found\n");
-//     return ;
-//   }
-
-//   cl_device_id device;
-//   cl_int err;
-
-//   err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
-//   CHECK(err);
-
-//   cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
-//   CHECK(err);
-  
-//   cl_command_queue_properties props[] = {0};
-
-//   cl_command_queue queue = clCreateCommandQueueWithProperties(
-//       context,
-//       device,
-//       props,
-//       &err
-//   );
-//   CHECK(err);
-  
-//   cl_program program = clCreateProgramWithSource(context, 1, &source, NULL, &err);
-//   CHECK(err);
-
-//   err = clBuildProgram(program, 0, NULL ,NULL, NULL, NULL);
-//   CHECK(err);
-
-//   cl_kernel kernel = clCreateKernel(program, "ntt", &err);
-//   CHECK(err);
-
-//   // Create buffer
-//   cl_mem buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int16_t) * 256, NULL, &err);
-//   CHECK(err);
-
-//   clEnqueueWriteBuffer(queue, buffer, CL_FALSE, 0, sizeof(int16_t) * 256, r->coeffs, 0, NULL, NULL);
-
-
-//   //excecute Kernel
-//   clSetKernelArg(kernel, 0, sizeof(buffer), &buffer);
-//   size_t global_dimensions[] = {128,0,0};
-//   clEnqueueNDRangeKernel(queue, kernel, 1, NULL, global_dimensions, NULL, 0, NULL, NULL);
-
-//   // read baack result
-//   clEnqueueReadBuffer(queue, buffer, CL_FALSE, 0, sizeof(int16_t) * 256, r->coeffs, 0, NULL, NULL);
-//   clFinish(queue);
-//   poly_reduce(r);
-
-// }
 
 void poly_ntt_GPU_speed(poly *r)
 {
@@ -363,7 +306,7 @@ void poly_ntt_GPU_speed(poly *r)
 
     clSetKernelArg(g_ctx.kernel, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
-    size_t global[] = {128};
+    size_t global[] = {64};
     clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 1, NULL, global, NULL, 0, NULL, &g_ctx.event);
 
     clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
@@ -386,8 +329,8 @@ void poly_ntt_GPU_speed_batch(poly_batch *r)
 
     clSetKernelArg(g_ctx.kernel, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
-    size_t global[] = {128, BATCH_SIZE};
-    size_t local[] = {128, 1};
+    size_t global[] = {64, BATCH_SIZE};
+    size_t local[] = {64, 1};
     clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 2, NULL, global, local, 0, NULL, &g_ctx.event);
 
     clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
@@ -464,6 +407,13 @@ void poly_reduce(poly *r)
   unsigned int i;
   for(i=0;i<KYBER_N;i++)
     r->coeffs[i] = barrett_reduce(r->coeffs[i]);
+}
+
+void poly_reduce_batch(int16_t *r)
+{
+  unsigned int i;
+  for(i=0;i<KYBER_N;i++)
+    r[i] = barrett_reduce(r[i]);
 }
 
 /*************************************************

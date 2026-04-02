@@ -45,56 +45,67 @@ static short fqmul(short a, short b) {
 }
 
 
-// Original NTT kernel
-// kernel void ntt(__global short *r){
-//   __private unsigned int len, start, j, k, group;
-//   __private short t, zeta;
-//   const int tid = get_global_id(0);
-//   const int block = get_global_id(1);
-//   // TODO Fix indexing and so that each kernel accesses correct poly
-//   k = 1;
-    
-
-//   for(int len = 128; len >=2; len >>=1) {
-//     zeta = zetas[k + (tid/len)];
-//     j = (tid/len) * len + tid;
-//     t = fqmul(zeta, r[j + len]);
-//     r[j + len] = r[j] - t;
-//     r[j] = r[j] + t;
-//     k = k << 1;
-//     barrier(CLK_GLOBAL_MEM_FENCE);
-//   }
-// }
-
- // Batched + shared memory NTT kernel
+ // Batched + combining levels
 kernel void ntt(__global short *r){
   __private unsigned int len, start, j, k, group;
-  __private short t, zeta;
-  const int tid = get_local_id(0);
+  __private short t, zeta, j1, j2, g1, g2, g3, g4;
+  const int tid = get_global_id(0);
   const int block = get_global_id(1);
   int base = block * 256; // base index for this polynomial in batch
   // TODO Fix indexing and so that each kernel accesses correct poly
   k = 1;
+  len = 128;
 
-  __local short local_r[256];
-  local_r[tid] = r[tid + base];
-  local_r[tid + 128] = r[tid + 128 + base];
-  barrier(CLK_LOCAL_MEM_FENCE);
+  
 
-  for(int len = 128; len >=2; len >>=1) {
+  zeta = zetas[k + (tid/len)];
+  j1 = (tid/len) * len + tid;
+  j2 = (tid/len) * len + tid + 64;
+  t = fqmul(zeta, r[j1+len]);
+  g1 = r[j1] - t;
+  g2 = r[j1] + t;
+  t=fqmul(zeta, r[j2+len]);
+  g3 = r[j2] - t;
+  g4 = r[j2] + t;
+  k = k << 1;
+
+  len = 64;
+  zeta = zetas[k + (tid/len)];
+  j1 = (tid/len) * len + tid;
+  j2 = (tid/len) * len + tid + 128;
+  // 64-128
+  t = fqmul(zeta, g4);
+  r[j1+len]= g2 - t;
+  r[j1]= g2 + t;
+  // barrier(CLK_GLOBAL_MEM_FENCE);
+
+  zeta = zetas[k + ((tid+64) /len) ];
+  t=fqmul(zeta, g3);
+  r[j2 + len] = g1 - t;
+  r[j2] = g1 + t;
+  k = k << 1;
+  // len = 32;
+
+  // barrier(CLK_GLOBAL_MEM_FENCE);
+  for(len = 32; len >=2; len >>=1) {
     zeta = zetas[k + (tid/len)];
     j = (tid/len) * len + tid;
-    t = fqmul(zeta, local_r[j + len]);
-    local_r[j + len] = local_r[j] - t;
-    local_r[j] = local_r[j] + t;
+    t = fqmul(zeta, r[j + len]);
+    r[j + len] = r[j] - t;
+    r[j] = r[j] + t;
+
+    zeta = zetas[k + ((tid+64) /len) ];
+    j = (tid/len) * len + tid + 128;
+    t = fqmul(zeta, r[j + len]);
+    r[j + len] = r[j] - t;
+    r[j] = r[j] + t;
+    
     k = k << 1;
-    barrier(CLK_LOCAL_MEM_FENCE);
+    barrier(CLK_GLOBAL_MEM_FENCE);
   }
 
-  r[tid + base] = barrett_reduce(local_r[tid]);
-  r[tid + 128 + base] = barrett_reduce(local_r[tid +128]);
+  // r[tid + base] = barrett_reduce(local_r[tid]);
+  // r[tid + 128 + base] = barrett_reduce(local_r[tid +128]);
   // r[tid + base] = local_r[tid];
   // r[tid + 128 + base] = local_r[tid +128];
 }
-
-// test

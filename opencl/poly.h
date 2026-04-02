@@ -61,6 +61,8 @@ void poly_tomont(poly *r);
 
 #define poly_reduce KYBER_NAMESPACE(poly_reduce)
 void poly_reduce(poly *r);
+#define poly_reduce_batch KYBER_NAMESPACE(poly_reduce_batch)
+void poly_reduce_batch(int16_t *r);
 
 #define poly_add KYBER_NAMESPACE(poly_add)
 void poly_add(poly *r, const poly *a, const poly *b);
