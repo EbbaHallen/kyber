@@ -287,14 +287,14 @@ void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t non
 void poly_ntt(poly *r)
 {
   ntt(r->coeffs);
-  // poly_reduce(r);
+  poly_reduce(r);
 }
 
 void poly_ntt_batch(poly_batch *r)
 {
   for(int i = 0; i < BATCH_SIZE; i++) {
     ntt(r->coeffs + i * KYBER_N);
-    // poly_reduce_batch(r->coeffs + i * KYBER_N);
+    poly_reduce_batch(r->coeffs + i * KYBER_N);
   }
 }
 

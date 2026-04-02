@@ -56,17 +56,24 @@ kernel void ntt(__global short *r){
   k = 1;
   len = 128;
 
+  // Load data into local memory, each thread loads 4 elements
+  __local short local_r[256];
+  local_r[tid] = r[tid + base];
+  local_r[tid + 64] = r[tid + 64 + base];
+  local_r[tid + 128] = r[tid + 128 + base];
+  local_r[tid + 192] = r[tid + 192 + base];
+  barrier(CLK_LOCAL_MEM_FENCE);
   
 
   zeta = zetas[k + (tid/len)];
   j1 = (tid/len) * len + tid;
   j2 = (tid/len) * len + tid + 64;
-  t = fqmul(zeta, r[j1+len]);
-  g1 = r[j1] - t;
-  g2 = r[j1] + t;
-  t=fqmul(zeta, r[j2+len]);
-  g3 = r[j2] - t;
-  g4 = r[j2] + t;
+  t = fqmul(zeta, local_r[j1+len]);
+  g1 = local_r[j1] - t;
+  g2 = local_r[j1] + t;
+  t=fqmul(zeta, local_r[j2+len]);
+  g3 = local_r[j2] - t;
+  g4 = local_r[j2] + t;
   k = k << 1;
 
   len = 64;
@@ -75,37 +82,39 @@ kernel void ntt(__global short *r){
   j2 = (tid/len) * len + tid + 128;
   // 64-128
   t = fqmul(zeta, g4);
-  r[j1+len]= g2 - t;
-  r[j1]= g2 + t;
+  local_r[j1+len]= g2 - t;
+  local_r[j1]= g2 + t;
   // barrier(CLK_GLOBAL_MEM_FENCE);
 
   zeta = zetas[k + ((tid+64) /len) ];
   t=fqmul(zeta, g3);
-  r[j2 + len] = g1 - t;
-  r[j2] = g1 + t;
+  local_r[j2 + len] = g1 - t;
+  local_r[j2] = g1 + t;
   k = k << 1;
   // len = 32;
 
-  // barrier(CLK_GLOBAL_MEM_FENCE);
+  barrier(CLK_LOCAL_MEM_FENCE);
   for(len = 32; len >=2; len >>=1) {
     zeta = zetas[k + (tid/len)];
     j = (tid/len) * len + tid;
-    t = fqmul(zeta, r[j + len]);
-    r[j + len] = r[j] - t;
-    r[j] = r[j] + t;
+    t = fqmul(zeta, local_r[j + len]);
+    local_r[j + len] = local_r[j] - t;
+    local_r[j] = local_r[j] + t;
 
     zeta = zetas[k + ((tid+64) /len) ];
     j = (tid/len) * len + tid + 128;
-    t = fqmul(zeta, r[j + len]);
-    r[j + len] = r[j] - t;
-    r[j] = r[j] + t;
+    t = fqmul(zeta, local_r[j + len]);
+    local_r[j + len] = local_r[j] - t;
+    local_r[j] = local_r[j] + t;
     
     k = k << 1;
-    barrier(CLK_GLOBAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE);
   }
 
-  // r[tid + base] = barrett_reduce(local_r[tid]);
-  // r[tid + 128 + base] = barrett_reduce(local_r[tid +128]);
+  r[tid + base] = barrett_reduce(local_r[tid]);
+  r[tid + 64 + base] = barrett_reduce(local_r[tid + 64]);
+  r[tid + 128 + base] = barrett_reduce(local_r[tid + 128]);
+  r[tid + 192 + base] = barrett_reduce(local_r[tid + 192]);
   // r[tid + base] = local_r[tid];
   // r[tid + 128 + base] = local_r[tid +128];
 }
