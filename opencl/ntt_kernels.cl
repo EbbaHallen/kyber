@@ -70,7 +70,7 @@ static short fqmul(short a, short b) {
 kernel void ntt(__global short *r){
   __private unsigned int len, start, j, k, group;
   __private short t, zeta;
-  const int tid = get_local_id(0);
+  const int tid = get_global_id(0);
   const int block = get_global_id(1);
   int base = block * 256; // base index for this polynomial in batch
   // TODO Fix indexing and so that each kernel accesses correct poly
@@ -98,4 +98,3 @@ kernel void ntt(__global short *r){
   // r[tid + 128 + base] = local_r[tid +128];
 }
 
-// test
