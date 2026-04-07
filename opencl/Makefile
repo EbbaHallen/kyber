@@ -93,14 +93,14 @@ test/test_speed768: $(SOURCESKECCAK) $(HEADERSKECCAK) test/cpucycles.h test/cpuc
 test/test_speed1024: $(SOURCESKECCAK) $(HEADERSKECCAK) test/cpucycles.h test/cpucycles.c test/speed_print.h test/speed_print.c test/test_speed.c randombytes.c
 	$(CC) $(CFLAGS) -DKYBER_K=4 $(SOURCESKECCAK) randombytes.c test/cpucycles.c test/speed_print.c test/test_speed.c -o $@ -lOpenCL
 
-test/test_ntt512: $(SOURCESKECCAK) $(HEADERSKECCAK) test/cpucycles.h test/cpucycles.c test/speed_print.h test/speed_print.c test/test_ntt.c randombytes.c
-	$(CC) $(CFLAGS) -DKYBER_K=2 $(SOURCESKECCAK) randombytes.c test/cpucycles.c test/speed_print.c test/test_ntt.c -o $@ -lOpenCL
+test/test_ntt512: $(SOURCESKECCAK) $(HEADERSKECCAK)  test/test_ntt.c randombytes.c
+	$(CC) $(CFLAGS) -DKYBER_K=2 $(SOURCESKECCAK) randombytes.c  test/test_ntt.c -o $@ -lOpenCL
 
-test/test_ntt768: $(SOURCESKECCAK) $(HEADERSKECCAK) test/cpucycles.h test/cpucycles.c test/speed_print.h test/speed_print.c test/test_ntt.c randombytes.c
-	$(CC) $(CFLAGS) -DKYBER_K=3 $(SOURCESKECCAK) randombytes.c test/cpucycles.c test/speed_print.c test/test_ntt.c -o $@ -lOpenCL
+test/test_ntt768: $(SOURCESKECCAK) $(HEADERSKECCAK)  test/test_ntt.c randombytes.c
+	$(CC) $(CFLAGS) -DKYBER_K=3 $(SOURCESKECCAK) randombytes.c  test/test_ntt.c -o $@ -lOpenCL
 
-test/test_ntt1024: $(SOURCESKECCAK) $(HEADERSKECCAK) test/cpucycles.h test/cpucycles.c test/speed_print.h test/speed_print.c test/test_ntt.c randombytes.c
-	$(CC) $(CFLAGS) -DKYBER_K=4 $(SOURCESKECCAK) randombytes.c test/cpucycles.c test/speed_print.c test/test_ntt.c -o $@ -lOpenCL
+test/test_ntt1024: $(SOURCESKECCAK) $(HEADERSKECCAK)  test/speed_print.h test/test_ntt.c randombytes.c
+	$(CC) $(CFLAGS) -DKYBER_K=4 $(SOURCESKECCAK) randombytes.c  test/test_ntt.c -o $@ -lOpenCL
 
 nistkat/PQCgenKAT_kem512: $(SOURCESKECCAK) $(HEADERSKECCAK) nistkat/PQCgenKAT_kem.c nistkat/rng.c nistkat/rng.h
 	$(CC) $(NISTFLAGS) -DKYBER_K=2 -o $@ $(SOURCESKECCAK) nistkat/rng.c nistkat/PQCgenKAT_kem.c $(LDFLAGS) -lcrypto

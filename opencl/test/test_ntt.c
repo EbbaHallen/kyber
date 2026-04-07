@@ -10,7 +10,6 @@
 #include "../polyvec.h"
 #include "../poly.h"
 #include "../randombytes.h"
-#include "cpucycles.h"
 #include "speed_print.h"
 #include "../opencl.h"
 #include "../ntt.h"
@@ -162,7 +161,7 @@ int main(void)
   }
   double end = get_time_sec();
   double total_time_ms = (end - start) * 1000;
-  print_result_time("NTT CPU batch timing: ", t_time, NTESTS);
+ // print_result_time("NTT CPU batch timing: ", t_time, NTESTS);
   print_throughput("NTT CPU batch timing: ", &total_time_ms, 1);
 
 
@@ -202,17 +201,17 @@ int main(void)
 
 
   // double start = now();
-  for(i=0;i<NTESTS;i++) {
+ // for(i=0;i<NTESTS;i++) {
     // t[i] = cpucycles();
-    clock_t startTime = (double)clock()/CLOCKS_PER_SEC;
-    poly_ntt(&ap);
-    double endTime = (double)clock()/CLOCKS_PER_SEC;
-    double timeElapsed = endTime - startTime;
-    t_time[i] = timeElapsed;
-  }
+ //   clock_t startTime = (double)clock()/CLOCKS_PER_SEC;
+ //   poly_ntt(&ap);
+ //   double endTime = (double)clock()/CLOCKS_PER_SEC;
+ //   double timeElapsed = endTime - startTime;
+  //  t_time[i] = timeElapsed;
+ // }
   // double end=now();
   // printf("Avg time: %f ms\n", (end - start)/NTESTS);
-  print_result_time("NTT: ", t_time, NTESTS);
+  //print_result_time("NTT: ", t_time, NTESTS);
 
 
 

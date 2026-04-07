@@ -2,6 +2,7 @@
 #include "ntt_kernels.h"
 #include "params.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 gpu_ctx g_ctx;
 
