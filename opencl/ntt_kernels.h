@@ -71,7 +71,7 @@ const char * source =
 "kernel void ntt(__global short *r){\n"
 "  __private unsigned int len, start, j, k, group;\n"
 "  __private short t, zeta;\n"
-"  const int tid = get_local_id(0);\n"
+"  const int tid = get_global_id(0);\n"
 "  const int block = get_global_id(1);\n"
 "  int base = block * 256; // base index for this polynomial in batch\n"
 "  // TODO Fix indexing and so that each kernel accesses correct poly\n"
@@ -98,5 +98,4 @@ const char * source =
 "  // r[tid + 128 + base] = local_r[tid +128];\n"
 "}\n"
 "\n"
-"// test\n"
 ;
