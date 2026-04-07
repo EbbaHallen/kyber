@@ -75,7 +75,6 @@ kernel void ntt(__global short *r){
   int base = block * 256; // base index for this polynomial in batch
   // TODO Fix indexing and so that each kernel accesses correct poly
   k = 1;
-  printf("block: %d, tid: %d\n", block, tid);
 
   __local short local_r[256];
   local_r[tid] = r[tid + base];

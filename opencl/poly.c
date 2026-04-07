@@ -12,6 +12,7 @@
 #include "verify.h"
 // #include "ntt_kernels.h"
 #include <stdio.h>
+#include <string.h>
 
 
 
@@ -294,72 +295,20 @@ void poly_ntt_batch(poly_batch *r)
 {
   for(int i = 0; i < BATCH_SIZE; i++) {
     ntt(r->coeffs + i * KYBER_N);
-    poly_reduce(r->coeffs + i * KYBER_N);
   }
+  poly_reduce_batch(r);
 }
 
-// void poly_ntt_GPU(poly *r)
-// {
-//   // Setup PpenCL
-//   cl_uint num_platforms;
-//   cl_platform_id platform;
-//   clGetPlatformIDs(1,&platform,&num_platforms);
-//   if(num_platforms == 0 ){
-//     printf("No opencl platforms found\n");
-//     return ;
-//   }
-
-//   cl_device_id device;
-//   cl_int err;
-
-//   err = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
-//   CHECK(err);
-
-//   cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
-//   CHECK(err);
-  
-//   cl_command_queue_properties props[] = {0};
-
-//   cl_command_queue queue = clCreateCommandQueueWithProperties(
-//       context,
-//       device,
-//       props,
-//       &err
-//   );
-//   CHECK(err);
-  
-//   cl_program program = clCreateProgramWithSource(context, 1, &source, NULL, &err);
-//   CHECK(err);
-
-//   err = clBuildProgram(program, 0, NULL ,NULL, NULL, NULL);
-//   CHECK(err);
-
-//   cl_kernel kernel = clCreateKernel(program, "ntt", &err);
-//   CHECK(err);
-
-//   // Create buffer
-//   cl_mem buffer = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int16_t) * 256, NULL, &err);
-//   CHECK(err);
-
-//   clEnqueueWriteBuffer(queue, buffer, CL_FALSE, 0, sizeof(int16_t) * 256, r->coeffs, 0, NULL, NULL);
-
-
-//   //excecute Kernel
-//   clSetKernelArg(kernel, 0, sizeof(buffer), &buffer);
-//   size_t global_dimensions[] = {128,0,0};
-//   clEnqueueNDRangeKernel(queue, kernel, 1, NULL, global_dimensions, NULL, 0, NULL, NULL);
-
-//   // read baack result
-//   clEnqueueReadBuffer(queue, buffer, CL_FALSE, 0, sizeof(int16_t) * 256, r->coeffs, 0, NULL, NULL);
-//   clFinish(queue);
-//   poly_reduce(r);
-
-// }
 
 void poly_ntt_GPU_speed(poly *r)
 {
-    clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
-                         sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
+    // clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
+    //                      sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
+                         
+    void* ptr = clEnqueueMapBuffer(g_ctx.queue, g_ctx.buffer, CL_TRUE, CL_MAP_WRITE, 0, sizeof(int16_t)*256*BATCH_SIZE, 0, NULL, NULL, NULL);
+    memcpy(ptr, r->coeffs, sizeof(int16_t)*256*BATCH_SIZE);
+    clEnqueueUnmapMemObject(g_ctx.queue, g_ctx.buffer, ptr, 0, NULL, NULL);
+    
 
     clSetKernelArg(g_ctx.kernel, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
@@ -378,13 +327,18 @@ void poly_ntt_GPU_speed(poly *r)
     clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &time_end, NULL);
     double nanoseconds = (double)(time_end - time_start);
     g_ctx.time = nanoseconds * 1e-06; // convert to milliseconds
-    // poly_reduce(r);
+
+    ptr = clEnqueueMapBuffer(g_ctx.queue, g_ctx.buffer, CL_TRUE, CL_MAP_READ, 0, sizeof(int16_t)*256*BATCH_SIZE, 0, NULL, NULL, NULL);
+    memcpy(r->coeffs, ptr, sizeof(int16_t)*256*BATCH_SIZE);
+    clEnqueueUnmapMemObject(g_ctx.queue, g_ctx.buffer, ptr, 0, NULL, NULL);
 }
 void poly_ntt_GPU_speed_batch(poly_batch *r)
 {
-    clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
-                         sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
-
+  
+    void* ptr = clEnqueueMapBuffer(g_ctx.queue, g_ctx.buffer, CL_TRUE, CL_MAP_WRITE, 0, sizeof(int16_t)*256*BATCH_SIZE, 0, NULL, NULL, NULL);
+    memcpy(ptr, r->coeffs, sizeof(int16_t)*256*BATCH_SIZE);
+    clEnqueueUnmapMemObject(g_ctx.queue, g_ctx.buffer, ptr, 0, NULL, NULL);
+    
     clSetKernelArg(g_ctx.kernel, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
     size_t global[] = {128, BATCH_SIZE};
@@ -402,7 +356,10 @@ void poly_ntt_GPU_speed_batch(poly_batch *r)
     clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &time_end, NULL);
     double nanoseconds = (double)(time_end - time_start);
     g_ctx.time = nanoseconds * 1e-06; // convert to milliseconds
-    // poly_reduce(r);
+
+    ptr = clEnqueueMapBuffer(g_ctx.queue, g_ctx.buffer, CL_TRUE, CL_MAP_READ, 0, sizeof(int16_t)*256*BATCH_SIZE, 0, NULL, NULL, NULL);
+    memcpy(r->coeffs, ptr, sizeof(int16_t)*256*BATCH_SIZE);
+    clEnqueueUnmapMemObject(g_ctx.queue, g_ctx.buffer, ptr, 0, NULL, NULL);
 }
 /*************************************************
 * Name:        poly_invntt_tomont
@@ -464,6 +421,12 @@ void poly_reduce(poly *r)
 {
   unsigned int i;
   for(i=0;i<KYBER_N;i++)
+    r->coeffs[i] = barrett_reduce(r->coeffs[i]);
+}
+void poly_reduce_batch(poly_batch *r)
+{
+  unsigned int i;
+  for(i=0;i<KYBER_N * BATCH_SIZE;i++)
     r->coeffs[i] = barrett_reduce(r->coeffs[i]);
 }
 

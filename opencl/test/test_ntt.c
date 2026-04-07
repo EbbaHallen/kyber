@@ -58,13 +58,11 @@ void print_throughput(const char *s, double *time, size_t tlen) {
 }
 
 
+
+
 int main(void)
 {
   unsigned int i;
-  // uint8_t pk[CRYPTO_PUBLICKEYBYTES];
-  // uint8_t sk[CRYPTO_SECRETKEYBYTES];
-  // uint8_t ct[CRYPTO_CIPHERTEXTBYTES];
-  // uint8_t key[CRYPTO_BYTES];
   uint8_t coins32[KYBER_SYMBYTES];
   uint8_t coins64[2*KYBER_SYMBYTES];
   polyvec matrix[KYBER_K];
@@ -161,7 +159,6 @@ int main(void)
   }
   double end = get_time_sec();
   double total_time_ms = (end - start) * 1000;
- // print_result_time("NTT CPU batch timing: ", t_time, NTESTS);
   print_throughput("NTT CPU batch timing: ", &total_time_ms, 1);
 
 
@@ -181,6 +178,14 @@ int main(void)
   }
   print_throughput("NTT GPU event timing: ", t_time, NTESTS);
 
+  printf("NTT GPU speed batch test including initialization... %d\n", BATCH_SIZE);
+  start = get_time_sec();
+  for(i=0;i<NTESTS;i++) {
+    poly_ntt_GPU_speed_batch(&aps);
+  }
+  end = get_time_sec();
+  total_time_ms = (end - start) * 1000;
+  print_throughput("NTT GPU total timing: ", &total_time_ms, 1);
 
 
   // double start = now();
