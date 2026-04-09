@@ -57,6 +57,14 @@ void print_throughput(const char *s, double *time, size_t tlen) {
 
 }
 
+void print_throughput_single(const char *s, double time, int n_tests) {
+  double average_time = time / n_tests;
+  double throughput = ((double) BATCH_SIZE) / (average_time / 1000.0); // elements per second
+  printf("%s Total time: %.2f ms\n", s, time);
+  printf("%s Average time: %.2f ms\n", s, average_time);
+  printf("%s Throughput: %.2f elements/second\n\n", s, throughput);
+}
+
 
 int main(void)
 {
@@ -162,7 +170,7 @@ int main(void)
   double end = get_time_sec();
   double total_time_ms = (end - start) * 1000;
  // print_result_time("NTT CPU batch timing: ", t_time, NTESTS);
-  print_throughput("NTT CPU batch timing: ", &total_time_ms, 1);
+  print_throughput_single("NTT CPU batch timing: ", total_time_ms, NTESTS);
 
 
   /* NTT GPU speed batch */
@@ -181,50 +189,14 @@ int main(void)
   }
   print_throughput("NTT GPU event timing: ", t_time, NTESTS);
 
-
-
-  // double start = now();
-  // for(i=0;i<NTESTS;i++) {
-  //   clock_t startTime = (double)clock()/CLOCKS_PER_SEC;
-  //   poly_ntt_GPU_speed_batch(&aps);
-  //   // batch_ntt(&aps);
-  //   double endTime = (double)clock()/CLOCKS_PER_SEC;
-  //   double timeElapsed = endTime - startTime;
-  //   t_time[i] = timeElapsed;
-  //   //printf("Time: %f \n", timeElapsed);
-  // }
-  // double end = now();
-  // printf("Avg time: %f ms\n", (end - start)/NTESTS);
-  // print_result_time("NTT GPU: ", t_time, NTESTS);
-  // print_throughput("NTT GPU: ", BATCH_SIZE, (end - start), NTESTS);
   
-
-
-  // double start = now();
- // for(i=0;i<NTESTS;i++) {
-    // t[i] = cpucycles();
- //   clock_t startTime = (double)clock()/CLOCKS_PER_SEC;
- //   poly_ntt(&ap);
- //   double endTime = (double)clock()/CLOCKS_PER_SEC;
- //   double timeElapsed = endTime - startTime;
-  //  t_time[i] = timeElapsed;
- // }
-  // double end=now();
-  // printf("Avg time: %f ms\n", (end - start)/NTESTS);
-  //print_result_time("NTT: ", t_time, NTESTS);
-
-
-
-  // printf("Running NTT on CPU for comparison...\n");
-  // start = now();
-  // for(i=0;i<NTESTS;i++) {
-  //   ntt(ap.coeffs);
-  // }
-  // end = now();
-  // printf("Avg time: %f ms\n", (end - start)/NTESTS);
-
-
-  
+  start = get_time_sec();
+  for(i=0;i<NTESTS;i++) {
+    poly_ntt_GPU_speed_batch(&aps);
+  }
+  end = get_time_sec();
+  total_time_ms = (end - start) * 1000;
+  print_throughput_single("NTT GPU total timing: ", total_time_ms, NTESTS);
   
   opencl_cleanup();
   return 0;
