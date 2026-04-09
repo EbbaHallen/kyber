@@ -294,7 +294,7 @@ void poly_ntt_batch(poly_batch *r)
 {
   for(int i = 0; i < BATCH_SIZE; i++) {
     ntt(r->coeffs + i * KYBER_N);
-    poly_reduce(r->coeffs + i * KYBER_N);
+    poly_reduce_batch(r->coeffs + i * KYBER_N);
   }
 }
 
@@ -465,6 +465,12 @@ void poly_reduce(poly *r)
   unsigned int i;
   for(i=0;i<KYBER_N;i++)
     r->coeffs[i] = barrett_reduce(r->coeffs[i]);
+}
+void poly_reduce_batch(int16_t *r)
+{
+  unsigned int i;
+  for(i=0;i<KYBER_N;i++)
+    r[i] = barrett_reduce(r[i]);
 }
 
 /*************************************************
