@@ -50,9 +50,9 @@ void print_throughput(const char *s, double *time, size_t tlen) {
     total_time += time[i];
   }
   double average_time = total_time / tlen;
+  double throughput = ((double) BATCH_SIZE) / (average_time / 1000.0); // elements per second
   printf("%s Total time: %.2f ms\n", s, total_time);
   printf("%s Average time: %.2f ms\n", s, average_time);
-  double throughput = ((double) BATCH_SIZE) / (total_time / 1000.0); // elements per second
   printf("%s Throughput: %.2f elements/second\n\n", s, throughput);
 
 }
@@ -189,7 +189,7 @@ int main(void)
   }
   print_throughput("NTT GPU event timing: ", t_time, NTESTS);
 
-  
+
   start = get_time_sec();
   for(i=0;i<NTESTS;i++) {
     poly_ntt_GPU_speed_batch(&aps);
