@@ -49,19 +49,19 @@ void print_throughput(const char *s, double *time, size_t tlen) {
   for(size_t i = 0; i < tlen; i++) {
     total_time += time[i];
   }
-  double average_time = total_time / tlen;
+  double average_time = total_time / tlen ; // Average time per batch in milliseconds
   double throughput = ((double) BATCH_SIZE) / (average_time / 1000.0); // elements per second
-  printf("%s Total time: %.2f ms\n", s, total_time);
-  printf("%s Average time: %.2f ms\n", s, average_time);
+  printf("%s Total time: %.4f ms\n", s, total_time);
+  printf("%s Average time: %.4f microseconds\n", s, average_time/BATCH_SIZE * 1000.0);
   printf("%s Throughput: %.2f elements/second\n\n", s, throughput);
 
 }
 
 void print_throughput_single(const char *s, double time, int n_tests) {
-  double average_time = time / n_tests;
+  double average_time = time / n_tests; // Average time per batch in milliseconds
   double throughput = ((double) BATCH_SIZE) / (average_time / 1000.0); // elements per second
-  printf("%s Total time: %.2f ms\n", s, time);
-  printf("%s Average time: %.2f ms\n", s, average_time);
+  printf("%s Total time: %.4f ms\n", s, time);
+  printf("%s Average time: %.4f microseconds\n", s, average_time/BATCH_SIZE * 1000.0);
   printf("%s Throughput: %.2f elements/second\n\n", s, throughput);
 }
 
