@@ -31,7 +31,14 @@ short barrett_reduce(short a) {
   return a - t;
 }
 
-
+short4 barrett_reduce_vec(short4 a)
+{
+    const int v = ((1 << 26) + KYBER_Q/2) / KYBER_Q;
+    int4 a_int = convert_int4(a);
+    int4 t = (a_int * v + (1 << 25)) >> 26;
+    t = t * KYBER_Q;
+    return convert_short4(a_int - t);
+}
 __constant short zetas[128] = {
   -1044,  -758,  -359, -1517,  1493,  1422,   287,   202,
    -171,   622,  1577,   182,   962, -1202, -1474,  1468,
@@ -51,49 +58,67 @@ __constant short zetas[128] = {
    -108,  -308,   996,   991,   958, -1460,  1522,  1628
 };
 
-static short4 fqmul(short4 a, short4 b) {
-  int4 prod = convert_int4(a)*convert_int4(b);
+static short4 fqmul(short a, short4 b) {
+  int4 prod = (int)a * convert_int4(b);
   return montgomery_reduce_vec(prod);
 }
-
-
  // Batched + shared memory NTT kernel
+ // Each work-group processes one polynomial, and each thread processes 4 coefficients
+ // 32 threads
 kernel void ntt(__global short *r){
   __private unsigned int len, start, j, k, group;
   __private short zeta;
   __private short4 t;
-  const int tid = get_global_id(0) * 4; // each thread processes 4 coefficients
+  const int tid = get_global_id(0); // each thread processes 4 coefficients
   const int block = get_global_id(1);
   int base = block * 256; // base index for this polynomial in batch
-  // TODO Fix indexing and so that each kernel accesses correct poly
   k = 1;
-  printf("block: %d, tid: %d\n", block, tid);
+  printf("Thread %d processing polynomial %d\n", tid, block);
 
   // __local short4 local_r[256];
   // local_r[tid] = vload4(0, r + tid + base);
-  __local short local_r[256];
-  local_r[tid] = r[tid + base];
-  local_r[tid + 128] = r[tid + 128 + base];
+  __local short4 local_r[64];
+  local_r[tid] = vload4(0, r + tid*4 + base);
+  local_r[tid + 32] = vload4(0, r + tid*4 + base + 128);
   barrier(CLK_LOCAL_MEM_FENCE);
 
   for(int len = 128; len >=4; len >>=1) {
-    zeta = zetas[k + (tid/len)]; // same zeta
-    j = (tid/len) * len + tid;
-    short4 r_j = vload4(0, local_r + j);
-    short4 r_j_len = vload4(0, local_r + j + len);
-
-    t = fqmul(zeta, r_j_len);
-    vstore4(r_j - t, 0, local_r + j + len);
-    vstore4(r_j + t, 0, local_r + j);
+    zeta = zetas[k + (tid*4/len)]; // same zeta
+    j = (tid*4/len) * len + tid*4;
+    int vj     = j >> 2;
+    int vj_len = (j + len) >> 2;
+    t = fqmul(zeta, local_r[vj_len]);
+    local_r[vj_len] = local_r[vj] - t;
+    local_r[vj] = local_r[vj] + t;
     k = k << 1;
     barrier(CLK_LOCAL_MEM_FENCE);
   }
-
   // last iteration with len = 2
+  len = 2;
+  __local short scalar = (__local short*)local_r;
 
-  r[tid + base] = barrett_reduce(local_r[tid]);
-  r[tid + 128 + base] = barrett_reduce(local_r[tid +128]);
-  // r[tid + base] = local_r[tid];
-  // r[tid + 128 + base] = local_r[tid +128];
+  zeta = zetas[k + (tid*4/len)];
+  j = (tid*4/len) * len + tid;
+
+  t = fqmul(zeta, scalar[j + len]);
+  scalar[j + len] = scalar[j] - t;
+  scalar[j] = scalar[j] + t;
+
+
+  t = fqmul(zeta, scalar[j + 1 + len]);
+  scalar[j + 1 + len] = scalar[j + 1] - t;
+  scalar[j + 1] = scalar[j + 1] + t;
+  zeta = zetas[k + (tid*4/len) + 1];
+  j = (tid*4+2/len) * len + tid*4 + 2;
+  t = fqmul(zeta, scalar[j + len]);
+  scalar[j + len] = scalar[j] - t;
+  scalar[j] = scalar[j] + t;
+  t = fqmul(zeta, scalar[j + 1 + len]);
+  scalar[j + 1 + len] = scalar[j + 1] - t;
+  scalar[j + 1] = scalar[j + 1] + t;
+
+  short4 reduced = barrett_reduce_vec(vload4(0, local_r + tid));
+  short4 reduced2 = barrett_reduce_vec(vload4(0, local_r + tid + 32));
+  vstore4(reduced, 0, r + tid*4 + base);
+  vstore4(reduced2, 0, r + tid*4 + base + 128);
 }
-

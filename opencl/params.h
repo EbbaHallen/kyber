@@ -6,6 +6,7 @@
 #endif
 
 #define BATCH_SIZE 1024
+#define NTHREADS 32
 
 /* Don't change parameters below this line */
 #if   (KYBER_K == 2)

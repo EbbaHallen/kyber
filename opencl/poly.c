@@ -363,8 +363,8 @@ void poly_ntt_GPU_speed(poly *r)
 
     clSetKernelArg(g_ctx.kernel, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
-    size_t global[] = {128,1};
-    size_t local[] = {128,1};
+    size_t global[] = {NTHREADS,1};
+    size_t local[] = {NTHREADS,1};
     clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 2, NULL, global, local, 0, NULL, &g_ctx.event);
 
     clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
@@ -387,8 +387,8 @@ void poly_ntt_GPU_speed_batch(poly_batch *r)
 
     clSetKernelArg(g_ctx.kernel, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
-    size_t global[] = {128, BATCH_SIZE};
-    size_t local[] = {128, 1};
+    size_t global[] = {NTHREADS, BATCH_SIZE};
+    size_t local[] = {NTHREADS, 1};
     clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 2, NULL, global, local, 0, NULL, &g_ctx.event);
 
     clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
