@@ -7,8 +7,11 @@
 typedef struct {
   cl_context context;
   cl_command_queue queue;
-  cl_kernel kernel;
+  cl_kernel kernelNtt;
+  cl_kernel kernelInvt;
+  cl_kernel kernelBasemul;
   cl_mem buffer;
+  cl_mem buffer_b;
   cl_event event;
   double time;
 } gpu_ctx;

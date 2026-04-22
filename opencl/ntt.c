@@ -83,7 +83,8 @@ void ntt(int16_t r[256]) {
 
   k = 1;
   for(len = 128; len >= 2; len >>= 1) {
-    for(start = 0; start < 256; start = j + len) {
+    // for(start = 0; start < 256; start = j + len) {
+    for(start = 0; start < 256; start += 2 * len) {
       zeta = zetas[k++];
       for(j = start; j < start + len; j++) {
         t = fqmul(zeta, r[j + len]);
@@ -110,7 +111,8 @@ void invntt(int16_t r[256]) {
 
   k = 127;
   for(len = 2; len <= 128; len <<= 1) {
-    for(start = 0; start < 256; start = j + len) {
+    // for(start = 0; start < 256; start = j + len) {
+    for(start = 0; start < 256; start += 2 * len) {
       zeta = zetas[k--];
       for(j = start; j < start + len; j++) {
         t = r[j];

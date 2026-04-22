@@ -33,9 +33,16 @@ void opencl_init() {
     //g_ctx.queue = clCreateCommandQueue(g_ctx.context, device, 0, &err);
 
     cl_program program = clCreateProgramWithSource(g_ctx.context, 1, &source, NULL, &err);
-    clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+    CHECK(err);
+    err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+    CHECK(err);
 
-    g_ctx.kernel = clCreateKernel(program, "ntt", &err);
+    g_ctx.kernelNtt = clCreateKernel(program, "ntt", &err);
+    CHECK(err);
+    g_ctx.kernelInvt = clCreateKernel(program, "invntt", &err);
+    CHECK(err);
+    g_ctx.kernelBasemul = clCreateKernel(program, "poly_basemul", &err);
+    CHECK(err);
 
     g_ctx.buffer = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
                                  sizeof(int16_t) * 256 * BATCH_SIZE, NULL, &err);
@@ -44,7 +51,9 @@ void opencl_init() {
 
 void opencl_cleanup() {
     clReleaseMemObject(g_ctx.buffer);
-    clReleaseKernel(g_ctx.kernel);
+    clReleaseKernel(g_ctx.kernelNtt);
+    clReleaseKernel(g_ctx.kernelInvt);
+    clReleaseKernel(g_ctx.kernelBasemul);
     clReleaseCommandQueue(g_ctx.queue);
     clReleaseContext(g_ctx.context);
 }

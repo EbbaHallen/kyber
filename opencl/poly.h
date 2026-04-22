@@ -54,8 +54,20 @@ void poly_ntt_GPU_speed(poly *r);
 void poly_ntt_GPU_speed_batch(poly_batch *r);
 #define poly_invntt_tomont KYBER_NAMESPACE(poly_invntt_tomont)
 void poly_invntt_tomont(poly *r);
+#define poly_invntt_tomont_batch KYBER_NAMESPACE(poly_invntt_tomont_batch)
+void poly_invntt_tomont_batch(poly_batch *r);
+#define poly_invntt_tomont_GPU KYBER_NAMESPACE(poly_invntt_tomont_GPU)
+void poly_invntt_tomont_GPU(poly *r);
+#define poly_invntt_tomont_GPU_batch KYBER_NAMESPACE(poly_invntt_tomont_GPU_batch)
+void poly_invntt_tomont_GPU_batch(poly_batch *r);
 #define poly_basemul_montgomery KYBER_NAMESPACE(poly_basemul_montgomery)
 void poly_basemul_montgomery(poly *r, const poly *a, const poly *b);
+#define poly_basemul_montgomery_batch KYBER_NAMESPACE(poly_basemul_montgomery_batch)
+void poly_basemul_montgomery_batch(poly_batch *r, const poly_batch *a, const poly_batch *b);
+#define poly_basemul_montgomery_GPU KYBER_NAMESPACE(poly_basemul_montgomery_GPU)
+void poly_basemul_montgomery_GPU(poly *r, const poly *a, const poly *b);
+#define poly_basemul_montgomery_GPU_batch KYBER_NAMESPACE(poly_basemul_montgomery_GPU_batch)
+void poly_basemul_montgomery_GPU_batch(poly_batch *r, const poly_batch *a, const poly_batch *b);
 #define poly_tomont KYBER_NAMESPACE(poly_tomont)
 void poly_tomont(poly *r);
 
