@@ -290,15 +290,9 @@ void poly_ntt_GPU_speed(poly *r)
 
     clSetKernelArg(g_ctx.kernelNtt, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
-<<<<<<< HEAD
-    size_t global[] = {NTHREADS,1};
-    size_t local[] = {NTHREADS,1};
-    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 2, NULL, global, local, 0, NULL, &g_ctx.event);
-=======
-    size_t global[] = {128,1};
-    size_t local[] = {128,1};
+    size_t global[] = {32,1};
+    size_t local[] = {32,1};
     clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelNtt, 2, NULL, global, local, 0, NULL, &g_ctx.event);
->>>>>>> main
 
     clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
                         sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
@@ -320,15 +314,9 @@ void poly_ntt_GPU_speed_batch(poly_batch *r)
 
     clSetKernelArg(g_ctx.kernelNtt, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
-<<<<<<< HEAD
-    size_t global[] = {NTHREADS, BATCH_SIZE};
-    size_t local[] = {NTHREADS, 1};
-    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 2, NULL, global, local, 0, NULL, &g_ctx.event);
-=======
-    size_t global[] = {128, BATCH_SIZE};
-    size_t local[] = {128, 1};
+    size_t global[] = {32, BATCH_SIZE};
+    size_t local[] = {32, 1};
     clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelNtt, 2, NULL, global, local, 0, NULL, &g_ctx.event);
->>>>>>> main
 
     clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
                         sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
@@ -511,8 +499,8 @@ void poly_basemul_montgomery_GPU_batch(poly_batch *r, const poly_batch *a, const
   if (err != CL_SUCCESS) printf("error writing buffer_a: %d\n", err);
   err = clEnqueueWriteBuffer(g_ctx.queue, buffer_b, CL_TRUE, 0,
     sizeof(int16_t)*KYBER_N*BATCH_SIZE, b->coeffs, 0, NULL, NULL);
-    if (err != CL_SUCCESS) printf("error writing buffer_b: %d\n", err);
-
+  if (err != CL_SUCCESS) printf("error writing buffer_b: %d\n", err);
+  
   clSetKernelArg(g_ctx.kernelBasemul, 0, sizeof(buffer_r), &buffer_r);
   clSetKernelArg(g_ctx.kernelBasemul, 1, sizeof(buffer_a), &buffer_a);
   clSetKernelArg(g_ctx.kernelBasemul, 2, sizeof(buffer_b), &buffer_b);

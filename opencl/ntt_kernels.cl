@@ -31,7 +31,6 @@ short barrett_reduce(short a) {
   return a - t;
 }
 
-<<<<<<< HEAD
 short4 barrett_reduce_vec(short4 a)
 {
     const int v = ((1 << 26) + KYBER_Q/2) / KYBER_Q;
@@ -40,8 +39,6 @@ short4 barrett_reduce_vec(short4 a)
     t = t * KYBER_Q;
     return convert_short4(a_int - t);
 }
-=======
->>>>>>> main
 __constant short zetas[128] = {
   -1044,  -758,  -359, -1517,  1493,  1422,   287,   202,
    -171,   622,  1577,   182,   962, -1202, -1474,  1468,
@@ -65,24 +62,23 @@ static short4 fqmul(short a, short4 b) {
   int4 prod = (int)a * convert_int4(b);
   return montgomery_reduce_vec(prod);
 }
-<<<<<<< HEAD
+
+static short fqmul_scalar(short a, short b) {
+  return montgomery_reduce((short)a*b);
+}
  // Batched + shared memory NTT kernel
  // Each work-group processes one polynomial, and each thread processes 4 coefficients
  // 32 threads
-=======
->>>>>>> main
 kernel void ntt(__global short *r){
   __private unsigned int len, start, j, k, group;
   __private short zeta;
   __private short4 t;
+  __private short ts;
   const int tid = get_global_id(0); // each thread processes 4 coefficients
   const int block = get_global_id(1);
   int base = block * 256; // base index for this polynomial in batch
   k = 1;
-<<<<<<< HEAD
-  printf("Thread %d processing polynomial %d\n", tid, block);
-=======
->>>>>>> main
+  // printf("Thread %d processing polynomial %d\n", tid, block);
 
   // __local short4 local_r[256];
   // local_r[tid] = vload4(0, r + tid + base);
@@ -94,6 +90,7 @@ kernel void ntt(__global short *r){
   for(int len = 128; len >=4; len >>=1) {
     zeta = zetas[k + (tid*4/len)]; // same zeta
     j = (tid*4/len) * len + tid*4;
+    // j = (tid*4/len) * len/4 + tid;
     int vj     = j >> 2;
     int vj_len = (j + len) >> 2;
     t = fqmul(zeta, local_r[vj_len]);
@@ -104,75 +101,42 @@ kernel void ntt(__global short *r){
   }
   // last iteration with len = 2
   len = 2;
-  __local short scalar = (__local short*)local_r;
+  __local short *scalar = (__local short*)local_r;
 
-<<<<<<< HEAD
   zeta = zetas[k + (tid*4/len)];
-  j = (tid*4/len) * len + tid;
+  j = (tid*4/len) * len + tid*4;
 
-  t = fqmul(zeta, scalar[j + len]);
-  scalar[j + len] = scalar[j] - t;
-  scalar[j] = scalar[j] + t;
+  ts = fqmul_scalar(zeta, scalar[j + len]);
+  scalar[j + len] = scalar[j] - ts;
+  scalar[j] = scalar[j] + ts;
 
 
-  t = fqmul(zeta, scalar[j + 1 + len]);
-  scalar[j + 1 + len] = scalar[j + 1] - t;
-  scalar[j + 1] = scalar[j + 1] + t;
+  ts = fqmul_scalar(zeta, scalar[j + 1 + len]);
+  scalar[j + 1 + len] = scalar[j + 1] - ts;
+  scalar[j + 1] = scalar[j + 1] + ts;
   zeta = zetas[k + (tid*4/len) + 1];
-  j = (tid*4+2/len) * len + tid*4 + 2;
-  t = fqmul(zeta, scalar[j + len]);
-  scalar[j + len] = scalar[j] - t;
-  scalar[j] = scalar[j] + t;
-  t = fqmul(zeta, scalar[j + 1 + len]);
-  scalar[j + 1 + len] = scalar[j + 1] - t;
-  scalar[j + 1] = scalar[j + 1] + t;
+  j = ((tid*4+2)/len) * len + tid*4 + 2;
+  ts = fqmul_scalar(zeta, scalar[j + len]);
+  scalar[j + len] = scalar[j] - ts;
+  scalar[j] = scalar[j] + ts;
+  ts = fqmul_scalar(zeta, scalar[j + 1 + len]);
+  scalar[j + 1 + len] = scalar[j + 1] - ts;
+  scalar[j + 1] = scalar[j + 1] + ts;
 
-  short4 reduced = barrett_reduce_vec(vload4(0, local_r + tid));
-  short4 reduced2 = barrett_reduce_vec(vload4(0, local_r + tid + 32));
+  short4 reduced = barrett_reduce_vec(local_r[tid]);
+  short4 reduced2 = barrett_reduce_vec(local_r[tid + 32]);
   vstore4(reduced, 0, r + tid*4 + base);
   vstore4(reduced2, 0, r + tid*4 + base + 128);
 }
-=======
-  r[tid + base] = barrett_reduce(local_r[tid]);
-  r[tid + 128 + base] = barrett_reduce(local_r[tid +128]);
-}
 
-kernel void invntt(__global short *r) {
-  __private unsigned int start, len, j, k;
-  __private short t, zeta;
-  const short f = 1441; // mont^2/128
-  const int tid = get_global_id(0);
-  const int block = get_global_id(1);
-  int base = block * 256;
-
-  __local short local_r[256];
-  local_r[tid] = r[tid + base];
-  local_r[tid + 128] = r[tid + 128 + base];
-  barrier(CLK_LOCAL_MEM_FENCE);
-
-  k = 127;
-  for(len = 2; len <= 128; len <<= 1) { 
-    zeta = zetas[k - (tid/len)];
-    j = (tid/len) * len + tid;
-    t = local_r[j];
-    local_r[j] = barrett_reduce(t + local_r[j + len]);
-    local_r[j + len] = local_r[j + len] - t;
-    local_r[j + len] = fqmul(zeta, local_r[j + len]);
-    k = k >> 1;
-    barrier(CLK_LOCAL_MEM_FENCE);
-  }
-
-  r[tid + base]       = fqmul(local_r[tid], f);
-  r[tid + 128 + base] = fqmul(local_r[tid + 128], f);
-}
 
 void basemul(__global short *r, __local short *a, __local short *b, short zeta)
 {
-  r[0]  = fqmul(a[1], b[1]);
-  r[0]  = fqmul(r[0], zeta);
-  r[0] += fqmul(a[0], b[0]);
-  r[1]  = fqmul(a[0], b[1]);
-  r[1] += fqmul(a[1], b[0]);
+  r[0]  = fqmul_scalar(a[1], b[1]);
+  r[0]  = fqmul_scalar(r[0], zeta);
+  r[0] += fqmul_scalar(a[0], b[0]);
+  r[1]  = fqmul_scalar(a[0], b[1]);
+  r[1] += fqmul_scalar(a[1], b[0]);
 }
 
 /* Assumes 64 threads per block */
@@ -198,4 +162,34 @@ kernel void poly_basemul(__global short *r, __global short *a, __global short *b
   basemul(&r[4*tid + base], &local_a[4*tid], &local_b[4*tid], zeta);
   basemul(&r[4*tid+2 + base], &local_a[4*tid+2], &local_b[4*tid+2], -zeta);
 }
->>>>>>> main
+
+
+kernel void invntt(__global short *r) {
+  __private unsigned int start, len, j, k;
+  __private short t, zeta;
+  const short f = 1441; // mont^2/128
+  const int tid = get_global_id(0);
+  const int block = get_global_id(1);
+  int base = block * 256;
+
+  __local short local_r[256];
+  local_r[tid] = r[tid + base];
+  local_r[tid + 128] = r[tid + 128 + base];
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  k = 127;
+  for(len = 2; len <= 128; len <<= 1) { 
+    zeta = zetas[k - (tid/len)];
+    j = (tid/len) * len + tid;
+    t = local_r[j];
+    local_r[j] = barrett_reduce(t + local_r[j + len]);
+    local_r[j + len] = local_r[j + len] - t;
+    local_r[j + len] = fqmul_scalar(zeta, local_r[j + len]);
+    k = k >> 1;
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+
+  r[tid + base]       = fqmul_scalar(local_r[tid], f);
+  r[tid + 128 + base] = fqmul_scalar(local_r[tid + 128], f);
+}
+
