@@ -22,6 +22,7 @@ void opencl_init() {
         CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE,
         0
     };
+    CHECK(err);
 
     g_ctx.queue = clCreateCommandQueueWithProperties(
         g_ctx.context,
@@ -46,6 +47,7 @@ void opencl_init() {
 
     g_ctx.buffer = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
                                  sizeof(int16_t) * 256 * BATCH_SIZE, NULL, &err);
+    CHECK(err);
 }
 
 

@@ -15,6 +15,8 @@
 #include "../ntt.h"
 
 #define NTESTS 1000
+#define BASEMUL_BYTES (KYBER_N * sizeof(int16_t) * 3)
+#define NTT_BYTES (KYBER_N * sizeof(int16_t) * 2)
 
 uint64_t t[NTESTS];
 double t_time[NTESTS];
@@ -53,28 +55,37 @@ void verify_ntt(const char* msg, const int16_t *ntt_result, const int16_t *expec
   // printf("%s: verification passed.\n", msg);
 }
 
+void print_throughput_single(const char *s, double time, int n_tests, int bytes_per_element) {
+  
+  double average_time = time / n_tests; // Average time per batch in milliseconds
+  double throughput = ((double) BATCH_SIZE) / (average_time / 1000.0); // elements per second
+  double bandwidth = bytes_per_element * BATCH_SIZE / (average_time / 1000.0) / (1024.0 *  1024.0 * 1024.0); // GB/s
+  printf("%s Total time: %.4f ms\n", s, time);
+  printf("%s Average time: %.4f microseconds\n", s, average_time/BATCH_SIZE * 1000.0);
+  printf("%s Throughput: %.2f elements/second\n\n", s, throughput);
+  printf("%s Bandwidth: %.2f GB/s\n\n", s, bandwidth);
+}
 
 /* Print throughput information */
-void print_throughput(const char *s, double *time, size_t tlen) {
+void print_throughput(const char *s, double *time, size_t tlen, int bytes_per_element) {
   double total_time = 0;
   for(size_t i = 0; i < tlen; i++) {
     total_time += time[i];
   }
-  double average_time = total_time / tlen ; // Average time per batch in milliseconds
-  double throughput = ((double) BATCH_SIZE) / (average_time / 1000.0); // elements per second
-  printf("%s Total time: %.4f ms\n", s, total_time);
-  printf("%s Average time: %.4f microseconds\n", s, average_time/BATCH_SIZE * 1000.0);
-  printf("%s Throughput: %.2f elements/second\n\n", s, throughput);
+  print_throughput_single(s, total_time, tlen, bytes_per_element);
+  // double average_time = total_time / tlen ; // Average time per batch in milliseconds
+  // double throughput = ((double) BATCH_SIZE) / (average_time / 1000.0); // elements per second
+  // double bandwidth = bytes_per_element * BATCH_SIZE / (average_time / 1000.0) / (1024.0 *  1024.0 * 1024.0); // GB/s
+
+  // printf("%s Total time: %.4f ms\n", s, total_time);
+  // printf("%s Average time: %.4f microseconds\n", s, average_time/BATCH_SIZE * 1000.0);
+  // printf("%s Throughput: %.2f elements/second\n\n", s, throughput);
+  // printf("%s Bandwidth: %.2f GB/s\n\n", s, bandwidth);
+
 
 }
 
-void print_throughput_single(const char *s, double time, int n_tests) {
-  double average_time = time / n_tests; // Average time per batch in milliseconds
-  double throughput = ((double) BATCH_SIZE) / (average_time / 1000.0); // elements per second
-  printf("%s Total time: %.4f ms\n", s, time);
-  printf("%s Average time: %.4f microseconds\n", s, average_time/BATCH_SIZE * 1000.0);
-  printf("%s Throughput: %.2f elements/second\n\n", s, throughput);
-}
+
 
 void test_intt_ntt_consistency() {
   poly ap_cpu;
@@ -181,7 +192,7 @@ void test_ntt_batch() {
     memcpy(&ap_gpu.coeffs[i * KYBER_N], tmp.coeffs,
           KYBER_N * sizeof(int16_t));
   }
-    memcpy(ap_cpu_single.coeffs, ap_cpu.coeffs, KYBER_N * sizeof(int16_t));
+  memcpy(ap_cpu_single.coeffs, ap_cpu.coeffs, KYBER_N * sizeof(int16_t));
 
 
   // Apply NTT on CPU and GPU
@@ -253,13 +264,13 @@ int main(void)
   poly_batch aps_cpu;
   poly ap_cpu;
   poly ap_gpu;
-  poly ap_original;
+  // poly ap_original;
   double start, end, total_time_ms;
 
   opencl_init();
 
   // test_intt_ntt_consistency();
-  test_multiplication();
+  // test_multiplication();
   test_ntt_single();
   test_ntt_batch();
   test_intt_single();
@@ -267,6 +278,19 @@ int main(void)
 
   /*-----------------------------------------------------------------*/
   /* Speed tests */
+
+  for (i = 0; i < BATCH_SIZE; i++) {
+    poly tmp;
+    poly_getnoise_eta1(&tmp, seed, 0);
+    poly_getnoise_eta2(&tmp, seed, 0);
+
+    memcpy(&aps_cpu.coeffs[i * KYBER_N], tmp.coeffs,
+          KYBER_N * sizeof(int16_t));
+    memcpy(&aps_gpu.coeffs[i * KYBER_N], tmp.coeffs,
+          KYBER_N * sizeof(int16_t));
+  }
+  memcpy(ap_cpu.coeffs, aps_cpu.coeffs, KYBER_N * sizeof(int16_t));
+  memcpy(ap_gpu.coeffs, aps_gpu.coeffs, KYBER_N * sizeof(int16_t));
   
   /* NTT CPU batch */
   printf("NTT CPU speed batch test... %d\n", BATCH_SIZE);
@@ -281,7 +305,7 @@ int main(void)
   end = get_time_sec();
   total_time_ms = (end - start) * 1000;
  // print_result_time("NTT CPU batch timing: ", t_time, NTESTS);
-  print_throughput_single("NTT CPU batch timing: ", total_time_ms, NTESTS);
+  print_throughput_single("NTT CPU batch timing: ", total_time_ms, NTESTS, NTT_BYTES);
 
 
   /* NTT GPU speed batch */
@@ -297,7 +321,7 @@ int main(void)
     poly_ntt_GPU_speed_batch(&aps_gpu);
     t_time[i] = g_ctx.time;
   }
-  print_throughput("NTT GPU event timing: ", t_time, NTESTS);
+  print_throughput("NTT GPU event timing: ", t_time, NTESTS, NTT_BYTES);
 
 
   start = get_time_sec();
@@ -306,7 +330,7 @@ int main(void)
   }
   end = get_time_sec();
   total_time_ms = (end - start) * 1000;
-  print_throughput_single("NTT GPU total timing: ", total_time_ms, NTESTS);
+  print_throughput_single("NTT GPU total timing: ", total_time_ms, NTESTS, NTT_BYTES);
   
 
   /* INV NTT */
@@ -325,7 +349,7 @@ int main(void)
   end = get_time_sec();
   total_time_ms = (end - start) * 1000;
  // print_result_time("NTT CPU batch timing: ", t_time, NTESTS);
-  print_throughput_single("NTT CPU batch timing: ", total_time_ms, NTESTS);
+  print_throughput_single("NTT CPU batch timing: ", total_time_ms, NTESTS, NTT_BYTES);
 
   /* INV NTT GPU speed batch */
   // warmup
@@ -340,8 +364,31 @@ int main(void)
     poly_invntt_tomont_GPU_batch(&aps_gpu);
     t_time[i] = g_ctx.time;
   }
-  print_throughput("NTT GPU event timing: ", t_time, NTESTS);
+  print_throughput("NTT GPU event timing: ", t_time, NTESTS, NTT_BYTES);
 
+  // printf("--------------------------------\n");
+  // printf("Basemul \n");
+  // /* basemul CPU batch */
+  // poly_batch r_cpu, a, b;
+  // for(i = 0; i < KYBER_N * BATCH_SIZE; i++) {
+  //   a.coeffs[i] = rand() % KYBER_Q;
+  //   b.coeffs[i] = rand() % KYBER_Q;
+    
+  // }
+  // printf("basemul CPU speed batch test... %d\n", BATCH_SIZE);
+  // for(i=0;i<NTESTS;i++) {
+  //   poly_basemul_montgomery_batch(&r_cpu, &a, &b);
+  //   t_time[i] = g_ctx.time;
+  // }
+  // print_throughput("basemul CPU event timing: ", t_time, NTESTS, BASEMUL_BYTES);
+
+  /* basemul GPU speed batch */
+  // warmup
+  // for(i=0;i<10;i++) {
+  //   poly_basemul_montgomery_GPU_batch(&r_cpu, &a, &b);
+  //   t_time[i] = g_ctx.time;
+  // }
+  // printf("basemul GPU speed batch test... %d\n", BATCH_SIZE);
 
   opencl_cleanup();
   return 0;
