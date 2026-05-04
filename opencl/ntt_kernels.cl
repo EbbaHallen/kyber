@@ -83,7 +83,7 @@ kernel void invntt(__global short *r) {
   barrier(CLK_LOCAL_MEM_FENCE);
 
   k = 127;
-  for(len = 2; len <= 128; len <<= 1) {
+  for(len = 2; len <= 128; len <<= 1) { 
     zeta = zetas[k - (tid/len)];
     j = (tid/len) * len + tid;
     t = local_r[j];
