@@ -1,0 +1,37 @@
+CPU NTT
+GPU NTT
+NTT CPU speed batch test... 128
+NTT CPU batch timing:  Total time: 218.4809 ms
+NTT CPU batch timing:  Average time: 1.7069 microseconds
+NTT CPU batch timing:  Throughput: 585863.70 elements/second
+
+NTT CPU batch timing:  Bandwidth: 0.56 GB/s
+
+NTT GPU speed batch test... 128
+NTT GPU event timing:  Total time: 115.5099 ms
+NTT GPU event timing:  Average time: 0.9024 microseconds
+NTT GPU event timing:  Throughput: 1108129.65 elements/second
+
+NTT GPU event timing:  Bandwidth: 1.06 GB/s
+
+NTT GPU total timing:  Total time: 356.8992 ms
+NTT GPU total timing:  Average time: 2.7883 microseconds
+NTT GPU total timing:  Throughput: 358644.69 elements/second
+
+NTT GPU total timing:  Bandwidth: 0.34 GB/s
+
+INV NTT 
+NTT CPU speed batch test... 128
+NTT CPU batch timing:  Total time: 228.8660 ms
+NTT CPU batch timing:  Average time: 1.7880 microseconds
+NTT CPU batch timing:  Throughput: 559279.18 elements/second
+
+NTT CPU batch timing:  Bandwidth: 0.53 GB/s
+
+NTT GPU speed batch test... 128
+NTT GPU event timing:  Total time: 207.8415 ms
+NTT GPU event timing:  Average time: 1.6238 microseconds
+NTT GPU event timing:  Throughput: 615853.95 elements/second
+
+NTT GPU event timing:  Bandwidth: 0.59 GB/s
+

@@ -20,7 +20,6 @@ short barrett_reduce(short a) {
   return a - t;
 }
 
-
 __constant short zetas[128] = {
   -1044,  -758,  -359, -1517,  1493,  1422,   287,   202,
    -171,   622,  1577,   182,   962, -1202, -1474,  1468,
@@ -52,7 +51,6 @@ kernel void ntt(__global short *r){
   const int tid = get_global_id(0);
   const int block = get_global_id(1);
   int base = block * 256; // base index for this polynomial in batch
-  // TODO Fix indexing and so that each kernel accesses correct poly
   k = 1;
   len = 128;
 
@@ -117,4 +115,66 @@ kernel void ntt(__global short *r){
   r[tid + 192 + base] = barrett_reduce(local_r[tid + 192]);
   // r[tid + base] = local_r[tid];
   // r[tid + 128 + base] = local_r[tid +128];
+}
+
+kernel void invntt(__global short *r) {
+  __private unsigned int start, len, j, k;
+  __private short t, zeta;
+  const short f = 1441; // mont^2/128
+  const int tid = get_global_id(0);
+  const int block = get_global_id(1);
+  int base = block * 256;
+
+  __local short local_r[256];
+  local_r[tid] = r[tid + base];
+  local_r[tid + 128] = r[tid + 128 + base];
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  k = 127;
+  for(len = 2; len <= 128; len <<= 1) { 
+    zeta = zetas[k - (tid/len)];
+    j = (tid/len) * len + tid;
+    t = local_r[j];
+    local_r[j] = barrett_reduce(t + local_r[j + len]);
+    local_r[j + len] = local_r[j + len] - t;
+    local_r[j + len] = fqmul(zeta, local_r[j + len]);
+    k = k >> 1;
+    barrier(CLK_LOCAL_MEM_FENCE);
+  }
+
+  r[tid + base]       = fqmul(local_r[tid], f);
+  r[tid + 128 + base] = fqmul(local_r[tid + 128], f);
+}
+
+void basemul(__global short *r, __local short *a, __local short *b, short zeta)
+{
+  r[0]  = fqmul(a[1], b[1]);
+  r[0]  = fqmul(r[0], zeta);
+  r[0] += fqmul(a[0], b[0]);
+  r[1]  = fqmul(a[0], b[1]);
+  r[1] += fqmul(a[1], b[0]);
+}
+
+/* Assumes 64 threads per block */
+kernel void poly_basemul(__global short *r, __global short *a, __global short *b){
+  const int tid = get_global_id(0);
+  const int block = get_global_id(1);
+  int base = block * 256;
+  short zeta = zetas[64 + tid];
+  // printf("tid: %d, block: %d\n", tid, block);
+
+  __local short local_a[256];
+  __local short local_b[256];
+  local_a[tid] = a[tid + base];
+  local_a[tid + 64] = a[tid + 64 + base];
+  local_a[tid + 128] = a[tid + 128 + base];
+  local_a[tid + 192] = a[tid + 192 + base];
+  local_b[tid] = b[tid + base];
+  local_b[tid + 64] = b[tid + 64 + base];
+  local_b[tid + 128] = b[tid + 128 + base];
+  local_b[tid + 192] = b[tid + 192 + base];
+  barrier(CLK_LOCAL_MEM_FENCE);
+
+  basemul(&r[4*tid + base], &local_a[4*tid], &local_b[4*tid], zeta);
+  basemul(&r[4*tid+2 + base], &local_a[4*tid+2], &local_b[4*tid+2], -zeta);
 }

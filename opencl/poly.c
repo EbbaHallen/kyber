@@ -268,22 +268,6 @@ void poly_getnoise_eta2(poly *r, const uint8_t seed[KYBER_SYMBYTES], uint8_t non
 **************************************************/
 
 
-// void handle_error(cl_program program, cl_device_id device){
-//   size_t log_size;
-//     clGetProgramBuildInfo(program, device,
-//                           CL_PROGRAM_BUILD_LOG,
-//                           0, NULL, &log_size);
-
-//     char *log = malloc(log_size);
-//     clGetProgramBuildInfo(program, device,
-//                           CL_PROGRAM_BUILD_LOG,
-//                           log_size, log, NULL);
-
-//     printf("Build log:\n%s\n", log);
-//     free(log);
-//     exit(1);
-// }
-
 void poly_ntt(poly *r)
 {
   ntt(r->coeffs);
@@ -304,10 +288,11 @@ void poly_ntt_GPU_speed(poly *r)
     clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
                          sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
 
-    clSetKernelArg(g_ctx.kernel, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
+    clSetKernelArg(g_ctx.kernelNtt, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
-    size_t global[] = {64};
-    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 1, NULL, global, NULL, 0, NULL, &g_ctx.event);
+    size_t global[] = {64,1};
+    size_t local[] = {64,1};
+    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelNtt, 2, NULL, global, local, 0, NULL, &g_ctx.event);
 
     clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
                         sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
@@ -327,11 +312,11 @@ void poly_ntt_GPU_speed_batch(poly_batch *r)
     clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
                          sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
 
-    clSetKernelArg(g_ctx.kernel, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
+    clSetKernelArg(g_ctx.kernelNtt, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
     size_t global[] = {64, BATCH_SIZE};
     size_t local[] = {64, 1};
-    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernel, 2, NULL, global, local, 0, NULL, &g_ctx.event);
+    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelNtt, 2, NULL, global, local, 0, NULL, &g_ctx.event);
 
     clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
                         sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
@@ -360,6 +345,61 @@ void poly_invntt_tomont(poly *r)
   invntt(r->coeffs);
 }
 
+void poly_invntt_tomont_batch(poly_batch *r)
+{
+  for(int i = 0; i < BATCH_SIZE; i++) {
+    invntt(r->coeffs + i * KYBER_N);
+  }
+}
+
+void poly_invntt_tomont_GPU(poly *r)
+{
+  clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
+                         sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
+
+  clSetKernelArg(g_ctx.kernelInvt, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
+
+  size_t global[] = {128,1};
+  size_t local[] = {128,1};
+  clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelInvt, 2, NULL, global, local, 0, NULL, &g_ctx.event);
+
+  clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
+                      sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
+
+  clFinish(g_ctx.queue);
+  
+  // Time kernel execution
+  cl_ulong time_start, time_end;
+  clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &time_start, NULL);
+  clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &time_end, NULL);
+  double nanoseconds = (double)(time_end - time_start);
+  g_ctx.time = nanoseconds * 1e-06; // convert to milliseconds
+}
+
+void poly_invntt_tomont_GPU_batch(poly_batch *r)
+{
+  clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
+                         sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
+
+  clSetKernelArg(g_ctx.kernelInvt, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
+
+  size_t global[] = {128,BATCH_SIZE};
+  size_t local[] = {128,1};
+  clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelInvt, 2, NULL, global, local, 0, NULL, &g_ctx.event);
+
+  clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
+                      sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
+
+  clFinish(g_ctx.queue);
+  
+  // Time kernel execution
+  cl_ulong time_start, time_end;
+  clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &time_start, NULL);
+  clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &time_end, NULL);
+  double nanoseconds = (double)(time_end - time_start);
+  g_ctx.time = nanoseconds * 1e-06; // convert to milliseconds
+}
+
 /*************************************************
 * Name:        poly_basemul_montgomery
 *
@@ -377,6 +417,119 @@ void poly_basemul_montgomery(poly *r, const poly *a, const poly *b)
     basemul(&r->coeffs[4*i+2], &a->coeffs[4*i+2], &b->coeffs[4*i+2], -zetas[64+i]);
   }
 }
+void poly_basemul_montgomery_batch(poly_batch *r, const poly_batch *a, const poly_batch *b)
+{
+  unsigned int i;
+  for(int j = 0; j < BATCH_SIZE; j++) {
+    for(i=0;i<KYBER_N/4;i++) {
+      basemul(&r->coeffs[j * KYBER_N + 4*i], &a->coeffs[j * KYBER_N + 4*i], &b->coeffs[j * KYBER_N + 4*i], zetas[64+i]);
+      basemul(&r->coeffs[j * KYBER_N + 4*i+2], &a->coeffs[j * KYBER_N + 4*i+2], &b->coeffs[j * KYBER_N + 4*i+2], -zetas[64+i]);
+    }
+  }
+}
+
+void poly_basemul_montgomery_GPU(poly *r, const poly *a, const poly *b)
+{
+  cl_mem buffer_r, buffer_a, buffer_b;
+  cl_int err;
+
+  buffer_r = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
+                                 sizeof(int16_t) * KYBER_N , NULL, &err);
+  if (err != CL_SUCCESS) printf("error creating buffers: %d\n", err);
+  buffer_a = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
+                                 sizeof(int16_t) * KYBER_N , NULL, &err);
+  if (err != CL_SUCCESS) printf("error creating buffers: %d\n", err);
+  buffer_b = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
+                                 sizeof(int16_t) * KYBER_N , NULL, &err);
+  if (err != CL_SUCCESS) printf("error creating buffers: %d\n", err);
+                                 
+  err = clEnqueueWriteBuffer(g_ctx.queue, buffer_a, CL_TRUE, 0,
+                         sizeof(int16_t)*KYBER_N, a->coeffs, 0, NULL, NULL);
+  if (err != CL_SUCCESS) printf("error writing buffer_a: %d\n", err);
+  err = clEnqueueWriteBuffer(g_ctx.queue, buffer_b, CL_TRUE, 0,
+    sizeof(int16_t)*KYBER_N, b->coeffs, 0, NULL, NULL);
+    if (err != CL_SUCCESS) printf("error writing buffer_b: %d\n", err);
+
+  clSetKernelArg(g_ctx.kernelBasemul, 0, sizeof(buffer_r), &buffer_r);
+  clSetKernelArg(g_ctx.kernelBasemul, 1, sizeof(buffer_a), &buffer_a);
+  clSetKernelArg(g_ctx.kernelBasemul, 2, sizeof(buffer_b), &buffer_b);
+
+  size_t global[] = {64,1};
+  size_t local[] = {64,1};
+  err = clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelBasemul, 2, NULL, global, local, 0, NULL, &g_ctx.event);
+  if (err != CL_SUCCESS) printf("error enqueuing kernel: %d\n", err);
+
+
+  err = clEnqueueReadBuffer(g_ctx.queue, buffer_r, CL_FALSE, 0,
+                      sizeof(int16_t)*KYBER_N, r->coeffs, 0, NULL, NULL);
+  if (err != CL_SUCCESS) printf("error reading buffer_r\n");
+
+
+  clFinish(g_ctx.queue);
+  
+  // Time kernel execution
+  cl_ulong time_start, time_end;
+  clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &time_start, NULL);
+  clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &time_end, NULL);
+  double nanoseconds = (double)(time_end - time_start);
+  g_ctx.time = nanoseconds * 1e-06; // convert to milliseconds
+
+  clReleaseMemObject(buffer_r);
+  clReleaseMemObject(buffer_a);
+  clReleaseMemObject(buffer_b);
+}
+
+void poly_basemul_montgomery_GPU_batch(poly_batch *r, const poly_batch *a, const poly_batch *b)
+{
+  cl_mem buffer_r, buffer_a, buffer_b;
+  cl_int err;
+
+  buffer_r = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
+                                 sizeof(int16_t) * KYBER_N * BATCH_SIZE, NULL, &err);
+  if (err != CL_SUCCESS) printf("error creating buffers: %d\n", err);
+  buffer_a = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
+                                 sizeof(int16_t) * KYBER_N * BATCH_SIZE, NULL, &err);
+  if (err != CL_SUCCESS) printf("error creating buffers: %d\n", err);
+  buffer_b = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
+                                 sizeof(int16_t) * KYBER_N * BATCH_SIZE, NULL, &err);
+  if (err != CL_SUCCESS) printf("error creating buffers: %d\n", err);
+                                 
+  err = clEnqueueWriteBuffer(g_ctx.queue, buffer_a, CL_TRUE, 0,
+                         sizeof(int16_t)*KYBER_N*BATCH_SIZE, a->coeffs, 0, NULL, NULL);
+  if (err != CL_SUCCESS) printf("error writing buffer_a: %d\n", err);
+  err = clEnqueueWriteBuffer(g_ctx.queue, buffer_b, CL_TRUE, 0,
+    sizeof(int16_t)*KYBER_N*BATCH_SIZE, b->coeffs, 0, NULL, NULL);
+    if (err != CL_SUCCESS) printf("error writing buffer_b: %d\n", err);
+
+  clSetKernelArg(g_ctx.kernelBasemul, 0, sizeof(buffer_r), &buffer_r);
+  clSetKernelArg(g_ctx.kernelBasemul, 1, sizeof(buffer_a), &buffer_a);
+  clSetKernelArg(g_ctx.kernelBasemul, 2, sizeof(buffer_b), &buffer_b);
+
+  size_t global[] = {64,BATCH_SIZE};
+  size_t local[] = {64,1};
+  err = clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelBasemul, 2, NULL, global, local, 0, NULL, &g_ctx.event);
+  if (err != CL_SUCCESS) printf("error enqueuing kernel: %d\n", err);
+
+
+  err = clEnqueueReadBuffer(g_ctx.queue, buffer_r, CL_FALSE, 0,
+                      sizeof(int16_t)*KYBER_N*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
+  if (err != CL_SUCCESS) printf("error reading buffer_r\n");
+
+
+  clFinish(g_ctx.queue);
+  
+  // Time kernel execution
+  cl_ulong time_start, time_end;
+  clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &time_start, NULL);
+  clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &time_end, NULL);
+  double nanoseconds = (double)(time_end - time_start);
+  g_ctx.time = nanoseconds * 1e-06; // convert to milliseconds
+
+  clReleaseMemObject(buffer_r);
+  clReleaseMemObject(buffer_a);
+  clReleaseMemObject(buffer_b);
+}
+
 
 /*************************************************
 * Name:        poly_tomont
@@ -408,13 +561,14 @@ void poly_reduce(poly *r)
   for(i=0;i<KYBER_N;i++)
     r->coeffs[i] = barrett_reduce(r->coeffs[i]);
 }
-
 void poly_reduce_batch(int16_t *r)
 {
   unsigned int i;
   for(i=0;i<KYBER_N;i++)
     r[i] = barrett_reduce(r[i]);
 }
+
+
 
 /*************************************************
 * Name:        poly_add
