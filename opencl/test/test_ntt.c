@@ -366,29 +366,34 @@ int main(void)
   }
   print_throughput("NTT GPU event timing: ", t_time, NTESTS, NTT_BYTES);
 
-  // printf("--------------------------------\n");
-  // printf("Basemul \n");
-  // /* basemul CPU batch */
-  // poly_batch r_cpu, a, b;
-  // for(i = 0; i < KYBER_N * BATCH_SIZE; i++) {
-  //   a.coeffs[i] = rand() % KYBER_Q;
-  //   b.coeffs[i] = rand() % KYBER_Q;
+  printf("--------------------------------\n");
+  printf("Basemul \n");
+  /* basemul CPU batch */
+  poly_batch r_cpu, a, b;
+  for(i = 0; i < KYBER_N * BATCH_SIZE; i++) {
+    a.coeffs[i] = rand() % KYBER_Q;
+    b.coeffs[i] = rand() % KYBER_Q;
     
-  // }
-  // printf("basemul CPU speed batch test... %d\n", BATCH_SIZE);
-  // for(i=0;i<NTESTS;i++) {
-  //   poly_basemul_montgomery_batch(&r_cpu, &a, &b);
-  //   t_time[i] = g_ctx.time;
-  // }
-  // print_throughput("basemul CPU event timing: ", t_time, NTESTS, BASEMUL_BYTES);
+  }
+  printf("basemul CPU speed batch test... %d\n", BATCH_SIZE);
+  for(i=0;i<NTESTS;i++) {
+    poly_basemul_montgomery_batch(&r_cpu, &a, &b);
+    t_time[i] = g_ctx.time;
+  }
+  print_throughput("basemul CPU event timing: ", t_time, NTESTS, BASEMUL_BYTES);
 
   /* basemul GPU speed batch */
   // warmup
-  // for(i=0;i<10;i++) {
-  //   poly_basemul_montgomery_GPU_batch(&r_cpu, &a, &b);
-  //   t_time[i] = g_ctx.time;
-  // }
-  // printf("basemul GPU speed batch test... %d\n", BATCH_SIZE);
+  for(i=0;i<10;i++) {
+    poly_basemul_montgomery_GPU_batch(&r_cpu, &a, &b);
+    t_time[i] = g_ctx.time;
+  }
+  printf("basemul GPU speed batch test... %d\n", BATCH_SIZE);
+  for(i=0;i<NTESTS;i++) {
+    poly_basemul_montgomery_GPU_batch(&r_cpu, &a, &b);
+    t_time[i] = g_ctx.time;
+  }
+  print_throughput("basemul GPU event timing: ", t_time, NTESTS, BASEMUL_BYTES);
 
   opencl_cleanup();
   return 0;
