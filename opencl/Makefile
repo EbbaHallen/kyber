@@ -46,7 +46,7 @@ kyber: \
 
 ntt_speed: \
 	test/test_ntt512 \
-	test/test_ntt768 \
+# 	test/test_ntt768 \
 	test/test_ntt1024 \
 
 

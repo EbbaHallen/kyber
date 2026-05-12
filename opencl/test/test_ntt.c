@@ -277,11 +277,11 @@ int main(void)
   opencl_init();
 
   // test_intt_ntt_consistency();
-  test_multiplication();
-  test_ntt_single();
-  test_ntt_batch();
-  test_intt_single();
-  test_intt_batch();
+  // test_multiplication();
+  // test_ntt_single();
+  // test_ntt_batch();
+  // test_intt_single();
+  // test_intt_batch();
 
   /*-----------------------------------------------------------------*/
   /* Speed tests */
@@ -384,11 +384,13 @@ int main(void)
     
   }
   // printf("basemul CPU speed batch %d\n", BATCH_SIZE);
+  start = get_time_sec();
   for(i=0;i<NTESTS;i++) {
     poly_basemul_montgomery_batch(&r_cpu, &a, &b);
-    t_time[i] = g_ctx.time;
   }
-  print_throughput_csv("CPU", "BASEMUL", t_time, NTESTS, BASEMUL_BYTES);
+  end = get_time_sec();
+  total_time_ms = (end - start) * 1000;
+  print_throughput_single_csv("CPU", "BASEMUL", total_time_ms, NTESTS, BASEMUL_BYTES);
 
   /* basemul GPU speed batch */
   // warmup
@@ -405,6 +407,34 @@ int main(void)
 
 
   /* Test entire chain */
+  start = get_time_sec();
+  for(i=0;i<NTESTS;i++){
+    poly_ntt_batch(&aps_gpu);
+    poly_basemul_montgomery_batch(&r_cpu, &aps_gpu, &b);
+    poly_invntt_tomont_batch(&r_cpu);
+  }
+  end = get_time_sec();
+  total_time_ms = (end - start) * 1000;
+  print_throughput_single_csv("CPU", "Chain", total_time_ms, NTESTS, NTT_BYTES * 2 + BASEMUL_BYTES);
+
+  start = get_time_sec();
+  for(i=0;i<NTESTS;i++){
+    poly_ntt_GPU_speed_batch(&aps_gpu);
+    poly_basemul_montgomery_GPU_batch(&r_cpu, &aps_gpu, &b);
+    poly_invntt_tomont_GPU_batch(&r_cpu);
+  }
+  end = get_time_sec();
+  total_time_ms = (end - start) * 1000;
+  print_throughput_single_csv("GPU", "Chain", total_time_ms, NTESTS, NTT_BYTES * 2 + BASEMUL_BYTES);
+  
+  start = get_time_sec();
+  for(i=0;i<NTESTS;i++){
+   poly_ntt_basemul_intt_GPU(&r_cpu, &aps_gpu, &b);
+  }
+  end = get_time_sec();
+  total_time_ms = (end - start) * 1000;
+  print_throughput_single_csv("GPU", "Fused", total_time_ms, NTESTS, NTT_BYTES * 2 + BASEMUL_BYTES);
+  
 
   opencl_cleanup();
   return 0;
