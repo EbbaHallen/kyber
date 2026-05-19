@@ -285,6 +285,7 @@ void poly_ntt_batch(poly_batch *r)
 
 void poly_ntt_GPU_speed(poly *r)
 {
+    cl_int err;
     clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
                          sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
 
@@ -292,7 +293,8 @@ void poly_ntt_GPU_speed(poly *r)
 
     size_t global[] = {128,1};
     size_t local[] = {128,1};
-    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelNtt, 2, NULL, global, local, 0, NULL, &g_ctx.event);
+    err = clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelNtt, 2, NULL, global, local, 0, NULL, &g_ctx.event);
+    if (err != CL_SUCCESS) printf("error enqueuing kernel: %d\n", err);
 
     // clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
     //                     sizeof(int16_t)*256, r->coeffs, 0, NULL, NULL);
@@ -309,6 +311,7 @@ void poly_ntt_GPU_speed(poly *r)
 }
 void poly_ntt_GPU_speed_batch(poly_batch *r)
 {
+    cl_int err;
     clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
                          sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
 
@@ -316,8 +319,8 @@ void poly_ntt_GPU_speed_batch(poly_batch *r)
 
     size_t global[] = {128, BATCH_SIZE};
     size_t local[] = {128, 1};
-    clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelNtt, 2, NULL, global, local, 0, NULL, &g_ctx.event);
-
+    err = clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelNtt, 2, NULL, global, local, 0, NULL, &g_ctx.event);
+    if (err != CL_SUCCESS) printf("error enqueuing kernel: %d\n", err);
     // clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
     //                     sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
 
