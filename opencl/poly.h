@@ -16,7 +16,7 @@ typedef struct{
 } poly;
 
 typedef struct{
-  int16_t coeffs[KYBER_N * BATCH_SIZE];
+  int16_t *coeffs;
 } poly_batch;
 
 

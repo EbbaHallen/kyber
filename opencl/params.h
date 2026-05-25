@@ -5,7 +5,7 @@
 #define KYBER_K 3	/* Change this for different security strengths */
 #endif
 
-#define BATCH_SIZE 32
+#define BATCH_SIZE 4096
 #define NTHREADS 32
 
 /* Don't change parameters below this line */
