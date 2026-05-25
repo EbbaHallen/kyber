@@ -442,13 +442,13 @@ int main(void)
   total_time_ms = (end - start) * 1000;
   print_throughput_single_csv("GPU", "Chain", total_time_ms, NTESTS, NTT_BYTES * 2 + BASEMUL_BYTES);
   
-  // start = get_time_sec();
-  // for(i=0;i<NTESTS;i++){
-  //  poly_ntt_basemul_intt_GPU(&r_cpu, &aps_gpu, &b);
-  // }
-  // end = get_time_sec();
-  // total_time_ms = (end - start) * 1000;
-  // print_throughput_single_csv("GPU", "Fused", total_time_ms, NTESTS, NTT_BYTES * 2 + BASEMUL_BYTES);
+  start = get_time_sec();
+  for(i=0;i<NTESTS;i++){
+   poly_ntt_basemul_intt_GPU(&r_cpu, &aps_gpu, &b);
+  }
+  end = get_time_sec();
+  total_time_ms = (end - start) * 1000;
+  print_throughput_single_csv("GPU", "Fused", total_time_ms, NTESTS, NTT_BYTES * 2 + BASEMUL_BYTES);
   
 
   opencl_cleanup();

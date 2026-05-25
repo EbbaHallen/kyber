@@ -47,12 +47,18 @@ void opencl_init() {
 
     g_ctx.buffer = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
                                  sizeof(int16_t) * 256 * BATCH_SIZE, NULL, &err);
+    g_ctx.buffer_b = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
+                                 sizeof(int16_t) * 256 * BATCH_SIZE, NULL, &err);
+    g_ctx.buffer_r = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
+                                 sizeof(int16_t) * 256 * BATCH_SIZE, NULL, &err);
     CHECK(err);
 }
 
 
 void opencl_cleanup() {
     clReleaseMemObject(g_ctx.buffer);
+    clReleaseMemObject(g_ctx.buffer_b);
+    clReleaseMemObject(g_ctx.buffer_r);
     clReleaseKernel(g_ctx.kernelNtt);
     clReleaseKernel(g_ctx.kernelInvt);
     clReleaseKernel(g_ctx.kernelBasemul);
