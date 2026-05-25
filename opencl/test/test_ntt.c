@@ -149,6 +149,11 @@ void test_multiplication() {
 }
 void test_multiplication_batch() {
   poly_batch a, b, r_cpu, r_gpu;
+  a.coeffs = malloc(KYBER_N * BATCH_SIZE * sizeof(int16_t));
+  b.coeffs = malloc(KYBER_N * BATCH_SIZE * sizeof(int16_t));
+  r_cpu.coeffs = malloc(KYBER_N * BATCH_SIZE * sizeof(int16_t));
+  r_gpu.coeffs = malloc(KYBER_N * BATCH_SIZE * sizeof(int16_t));
+
   // Initialize a and b with random coefficients
   for(int i = 0; i < KYBER_N * BATCH_SIZE; i++) {
     a.coeffs[i] = rand() % KYBER_Q;
@@ -187,6 +192,8 @@ void test_ntt_batch() {
   poly_batch ap_cpu;
   poly_batch ap_gpu;
   poly ap_cpu_single;
+  ap_cpu.coeffs = malloc(KYBER_N * BATCH_SIZE * sizeof(int16_t));
+  ap_gpu.coeffs = malloc(KYBER_N * BATCH_SIZE * sizeof(int16_t));
 
   // Generate random polynomials
   for (int i = 0; i < BATCH_SIZE; i++) {
@@ -235,6 +242,8 @@ void test_intt_batch() {
   poly_batch ap_cpu;
   poly_batch ap_gpu;
   poly ap_cpu_single;
+  ap_cpu.coeffs = malloc(KYBER_N * BATCH_SIZE * sizeof(int16_t));
+  ap_gpu.coeffs = malloc(KYBER_N * BATCH_SIZE * sizeof(int16_t));
 
   // Generate random polynomials
   for (int i = 0; i < BATCH_SIZE; i++) {
@@ -264,16 +273,16 @@ void test_intt_batch() {
 int main(void)
 {
   unsigned int i;
-  uint8_t coins32[KYBER_SYMBYTES];
-  uint8_t coins64[2*KYBER_SYMBYTES];
-  polyvec matrix[KYBER_K];
   poly_batch aps_gpu;
   poly_batch aps_cpu;
   poly ap_cpu;
   poly ap_gpu;
+  aps_cpu.coeffs = malloc(KYBER_N * BATCH_SIZE * sizeof(int16_t));
+  aps_gpu.coeffs = malloc(KYBER_N * BATCH_SIZE * sizeof(int16_t));
   // poly ap_original;
   double start, end, total_time_ms;
-
+  printf("before opencl\n");
+  fflush(stdout);
   opencl_init();
 
   // test_intt_ntt_consistency();
@@ -322,6 +331,7 @@ int main(void)
     poly_ntt_GPU_speed_batch(&aps_gpu);
     t_time[i] = g_ctx.time;
   }
+
 
 
   // printf("NTT GPU speed batch test... %d\n", BATCH_SIZE);
@@ -374,15 +384,20 @@ int main(void)
   }
   print_throughput_csv("GPU", "INTT", t_time, NTESTS, NTT_BYTES);
 
+
   // printf("--------------------------------\n");
   // printf("Basemul \n");
   /* basemul CPU batch */
   poly_batch r_cpu, a, b;
+  r_cpu.coeffs = malloc(KYBER_N * BATCH_SIZE * sizeof(int16_t));
+  a.coeffs = malloc(KYBER_N * BATCH_SIZE * sizeof(int16_t));
+  b.coeffs = malloc(KYBER_N * BATCH_SIZE * sizeof(int16_t));
   for(i = 0; i < KYBER_N * BATCH_SIZE; i++) {
     a.coeffs[i] = rand() % KYBER_Q;
     b.coeffs[i] = rand() % KYBER_Q;
     
   }
+
   // printf("basemul CPU speed batch %d\n", BATCH_SIZE);
   start = get_time_sec();
   for(i=0;i<NTESTS;i++) {

@@ -12,6 +12,7 @@ typedef struct {
   cl_kernel kernelBasemul;
   cl_mem buffer;
   cl_mem buffer_b;
+  cl_mem buffer_a;
   cl_mem buffer_r;
   cl_event event;
   double time;

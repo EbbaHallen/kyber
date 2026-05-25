@@ -14,6 +14,7 @@ void opencl_init() {
     cl_device_id device;
     cl_int err;
 
+    printf("initializing OpenCL...\n");
     clGetPlatformIDs(1, &platform, NULL);
     clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
 
@@ -52,6 +53,8 @@ void opencl_init() {
     g_ctx.buffer_b = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
                                  sizeof(int16_t) * KYBER_N * BATCH_SIZE, NULL, &err);
     CHECK(err);
+
+    printf("setup complete\n");
 }
 
 

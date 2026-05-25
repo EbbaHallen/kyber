@@ -312,8 +312,10 @@ void poly_ntt_GPU_speed(poly *r)
 void poly_ntt_GPU_speed_batch(poly_batch *r)
 {
     cl_int err;
-    clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
+    err = clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
                          sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
+
+    if (err != CL_SUCCESS) printf("error enqueuing write buffer: %d\n", err);
 
     clSetKernelArg(g_ctx.kernelNtt, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
 
@@ -434,20 +436,21 @@ void poly_basemul_montgomery_batch(poly_batch *r, const poly_batch *a, const pol
 void poly_basemul_montgomery_GPU(poly *r, const poly *a, const poly *b)
 {
   cl_int err;
+  cl_mem buffer_a;
 
   // buffer_r = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
   //                                sizeof(int16_t) * KYBER_N , NULL, &err);
   // if (err != CL_SUCCESS) printf("error creating buffers: %d\n", err);
-  // buffer_a = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
-  //                                sizeof(int16_t) * KYBER_N , NULL, &err);
-  // if (err != CL_SUCCESS) printf("error creating buffers: %d\n", err);
+  buffer_a = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
+                                 sizeof(int16_t) * KYBER_N , NULL, &err);
+  if (err != CL_SUCCESS) printf("error creating buffers: %d\n", err);
   // buffer_b = clCreateBuffer(g_ctx.context, CL_MEM_READ_WRITE,
   //                                sizeof(int16_t) * KYBER_N , NULL, &err);
   // if (err != CL_SUCCESS) printf("error creating buffers: %d\n", err);
                                  
-  // err = clEnqueueWriteBuffer(g_ctx.queue, buffer_a, CL_TRUE, 0,
-  //                        sizeof(int16_t)*KYBER_N, a->coeffs, 0, NULL, NULL);
-  // if (err != CL_SUCCESS) printf("error writing buffer_a: %d\n", err);
+  err = clEnqueueWriteBuffer(g_ctx.queue, buffer_a, CL_TRUE, 0,
+                         sizeof(int16_t)*KYBER_N, a->coeffs, 0, NULL, NULL);
+  if (err != CL_SUCCESS) printf("error writing buffer_a: %d\n", err);
   err = clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer_b, CL_TRUE, 0,
     sizeof(int16_t)*KYBER_N, b->coeffs, 0, NULL, NULL);
     if (err != CL_SUCCESS) printf("error writing buffer_b: %d\n", err);
@@ -462,9 +465,9 @@ void poly_basemul_montgomery_GPU(poly *r, const poly *a, const poly *b)
   if (err != CL_SUCCESS) printf("error enqueuing kernel: %d\n", err);
 
 
-  // err = clEnqueueReadBuffer(g_ctx.queue, buffer_r, CL_FALSE, 0,
-  //                     sizeof(int16_t)*KYBER_N, r->coeffs, 0, NULL, NULL);
-  // if (err != CL_SUCCESS) printf("error reading buffer_r\n");
+  err = clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer_r, CL_FALSE, 0,
+                      sizeof(int16_t)*KYBER_N, r->coeffs, 0, NULL, NULL);
+  if (err != CL_SUCCESS) printf("error reading buffer_r\n");
 
 
   clFinish(g_ctx.queue);
@@ -477,7 +480,7 @@ void poly_basemul_montgomery_GPU(poly *r, const poly *a, const poly *b)
   g_ctx.time = nanoseconds * 1e-06; // convert to milliseconds
 
   // clReleaseMemObject(buffer_r);
-  // clReleaseMemObject(buffer_a);
+  clReleaseMemObject(buffer_a);
   // clReleaseMemObject(buffer_b);
 }
 
@@ -488,7 +491,11 @@ void poly_basemul_montgomery_GPU_batch(poly_batch *r, const poly_batch *a, const
   
   err = clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer_b, CL_TRUE, 0,
     sizeof(int16_t)*KYBER_N*BATCH_SIZE, b->coeffs, 0, NULL, NULL);
-    if (err != CL_SUCCESS) printf("error writing buffer_b: %d\n", err);
+  if (err != CL_SUCCESS) printf("error writing buffer_b: %d\n", err);
+
+  err = clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_TRUE, 0,
+    sizeof(int16_t)*KYBER_N*BATCH_SIZE, a->coeffs, 0, NULL, NULL);
+  if (err != CL_SUCCESS) printf("error writing buffer_a: %d\n", err);
 
   clSetKernelArg(g_ctx.kernelBasemul, 0, sizeof(g_ctx.buffer_r), &g_ctx.buffer_r);
   clSetKernelArg(g_ctx.kernelBasemul, 1, sizeof(g_ctx.buffer), &g_ctx.buffer);
@@ -500,9 +507,9 @@ void poly_basemul_montgomery_GPU_batch(poly_batch *r, const poly_batch *a, const
   if (err != CL_SUCCESS) printf("error enqueuing kernel: %d\n", err);
 
 
-  // err = clEnqueueReadBuffer(g_ctx.queue, buffer_r, CL_FALSE, 0,
-  //                     sizeof(int16_t)*KYBER_N*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
-  // if (err != CL_SUCCESS) printf("error reading buffer_r\n");
+  err = clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer_r, CL_FALSE, 0,
+                      sizeof(int16_t)*KYBER_N*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
+  if (err != CL_SUCCESS) printf("error reading buffer_r\n");
 
 
   clFinish(g_ctx.queue);
