@@ -81,5 +81,7 @@ void poly_add(poly *r, const poly *a, const poly *b);
 #define poly_sub KYBER_NAMESPACE(poly_sub)
 void poly_sub(poly *r, const poly *a, const poly *b);
 
+#define poly_ntt_basemul_intt_GPU KYBER_NAMESPACE(poly_ntt_basemul_intt_GPU)
+void poly_ntt_basemul_intt_GPU(poly_batch *r, const poly_batch *a, const poly_batch *b);
 
 #endif

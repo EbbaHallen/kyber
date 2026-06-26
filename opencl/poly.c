@@ -604,3 +604,37 @@ void poly_sub(poly *r, const poly *a, const poly *b)
 
 
 
+void poly_ntt_basemul_intt_GPU(poly_batch *r, const poly_batch *a, const poly_batch *b)
+{
+  clEnqueueWriteBuffer(g_ctx.queue, g_ctx.buffer, CL_FALSE, 0,
+                         sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
+
+  clSetKernelArg(g_ctx.kernelNtt, 0, sizeof(g_ctx.buffer), &g_ctx.buffer);
+
+  size_t global[] = {128, BATCH_SIZE};
+  size_t local[] = {128, 1};
+  clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelNtt, 2, NULL, global, local, 0, NULL, &g_ctx.event);
+
+  clSetKernelArg(g_ctx.kernelBasemul, 0, sizeof(g_ctx.buffer_r), &g_ctx.buffer_r);
+  clSetKernelArg(g_ctx.kernelBasemul, 1, sizeof(g_ctx.buffer), &g_ctx.buffer);
+  clSetKernelArg(g_ctx.kernelBasemul, 2, sizeof(g_ctx.buffer_b), &g_ctx.buffer_b);
+  size_t global_basemul[] = {64,BATCH_SIZE};
+  size_t local_basemul[] = {64,1};
+  clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelBasemul, 2, NULL, global_basemul, local_basemul, 0, NULL, &g_ctx.event);
+
+  clSetKernelArg(g_ctx.kernelInvt, 0, sizeof(g_ctx.buffer_r), &g_ctx.buffer_r);
+  clEnqueueNDRangeKernel(g_ctx.queue, g_ctx.kernelInvt, 2, NULL, global, local, 0, NULL, &g_ctx.event);
+
+  clEnqueueReadBuffer(g_ctx.queue, g_ctx.buffer_r, CL_FALSE, 0,
+                      sizeof(int16_t)*256*BATCH_SIZE, r->coeffs, 0, NULL, NULL);
+
+  clFinish(g_ctx.queue);
+    
+  // Time kernel execution
+  cl_ulong time_start, time_end;
+  clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &time_start, NULL);
+  clGetEventProfilingInfo(g_ctx.event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &time_end, NULL);
+  double nanoseconds = (double)(time_end - time_start);
+  g_ctx.time = nanoseconds * 1e-06; // convert to milliseconds
+  // poly_reduce(r);
+}
